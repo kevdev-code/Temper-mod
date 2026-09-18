@@ -85,7 +85,8 @@ GRADLE_PID=$!
 # "joined the game" is the first line that means the world is actually on screen. The failure
 # alternatives matter as much: without them a crash looks exactly like a slow start.
 for _ in $(seq 1 150); do
-    grep -qE "joined the game|gradle exit=|FAILURE:|Exception in|Crash Report" "$LOG" 2>/dev/null && break
+    grep -qE "joined the game|FAILURE:|Exception in|Crash Report" "$LOG" 2>/dev/null && break
+    kill -0 "$GRADLE_PID" 2>/dev/null || break   # gradle died without a marker we recognise
     sleep 2
 done
 sleep 12
