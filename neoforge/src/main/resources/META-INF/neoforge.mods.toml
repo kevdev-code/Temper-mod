@@ -1,15 +1,16 @@
 modLoader = "javafml"
 loaderVersion = "[1,)"
-#issueTrackerURL = ""
-license = "Insert License Here"
+license = "MIT"
+issueTrackerURL = "https://github.com/kevdev-code/Temper-mod/issues"
 
 [[mods]]
 modId = "temper"
 version = "${version}"
 displayName = "Temper"
-authors = "Me!"
+authors = "kevdev-code"
+displayURL = "https://github.com/kevdev-code/Temper-mod"
 description = '''
-This is an example description! Tell everyone what your mod is about!
+Replaces vanilla tool progression with a four-part crafting system: head, handle, binding and reinforcement, each made from a different material. Works on Fabric and NeoForge.
 '''
 #logoFile = ""
 

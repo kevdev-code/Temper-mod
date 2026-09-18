@@ -3,15 +3,15 @@
   "id": "temper",
   "version": "${version}",
   "name": "Temper",
-  "description": "This is an example description! Tell everyone what your mod is about!",
+  "description": "Replaces vanilla tool progression with a four-part crafting system: head, handle, binding and reinforcement, each made from a different material. Works on Fabric and NeoForge.",
   "authors": [
-    "Me!"
+    "kevdev-code"
   ],
   "contact": {
-    "homepage": "https://fabricmc.net/",
-    "sources": "https://github.com/FabricMC/fabric-example-mod"
+    "issues": "https://github.com/kevdev-code/Temper-mod/issues",
+    "sources": "https://github.com/kevdev-code/Temper-mod"
   },
-  "license": "CC0-1.0",
+  "license": "MIT",
   "icon": "assets/temper/icon.png",
   "environment": "*",
   "entrypoints": {
@@ -31,8 +31,5 @@
     "java": ">=25",
     "architectury": ">=20.0.12",
     "fabric-api": "*"
-  },
-  "suggests": {
-    "another-mod": "*"
   }
 }

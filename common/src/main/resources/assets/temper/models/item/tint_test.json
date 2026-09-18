@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "temper:item/tint_test_handle",
+    "layer1": "temper:item/tint_test_head"
+  }
+}
