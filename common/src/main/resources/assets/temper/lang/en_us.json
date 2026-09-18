@@ -1,0 +1,8 @@
+{
+  "item.temper.sword": "Temper Sword",
+  "item.temper.sword.assembled": "%s Sword, %s Grip",
+  "itemGroup.temper": "Temper",
+  "material.temper.wood": "Wooden",
+  "material.temper.iron": "Iron",
+  "material.temper.diamond": "Diamond"
+}

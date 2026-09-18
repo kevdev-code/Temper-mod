@@ -1,0 +1,29 @@
+{
+  "_comment": "Head numbers are vanilla 26.1.2 ToolMaterial constants, read from the game jar. Handle multipliers are Temper's own and straddle 1.0 so the handle is a trade, not an upgrade. Adding a material is a new entry here and nothing else.",
+
+  "materials": {
+    "wood": {
+      "color": "#A0763F",
+      "ingredient": "#minecraft:wooden_tool_materials",
+      "head": { "durability": 59, "attack_damage_bonus": 0.0, "enchantment_value": 15 },
+      "handle": { "durability_multiplier": 0.85, "speed_multiplier": 1.15 },
+      "valid_parts": ["head", "handle"]
+    },
+
+    "iron": {
+      "color": "#D8D8D8",
+      "ingredient": "#minecraft:iron_tool_materials",
+      "head": { "durability": 250, "attack_damage_bonus": 2.0, "enchantment_value": 14 },
+      "handle": { "durability_multiplier": 1.0, "speed_multiplier": 1.0 },
+      "valid_parts": ["head", "handle"]
+    },
+
+    "diamond": {
+      "color": "#4AEDD9",
+      "ingredient": "#minecraft:diamond_tool_materials",
+      "head": { "durability": 1561, "attack_damage_bonus": 3.0, "enchantment_value": 10 },
+      "handle": { "durability_multiplier": 1.15, "speed_multiplier": 0.9 },
+      "valid_parts": ["head", "handle"]
+    }
+  }
+}

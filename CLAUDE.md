@@ -11,11 +11,9 @@ adding any gameplay feature. This file covers only how the repo works.
 Targets Minecraft **26.1.2**, Java **25**, Gradle 9.5.1, built with Architectury Loom for both
 **Fabric** and **NeoForge**. Base package is `io.github.kevdev_code.temper`.
 
-State: PLAN.md Phase 0 (the rendering spike) ran on branch `phase-0/tint-spike` and proved runtime
-tinting works on both loaders. Only its permanent half is on `main`: the tint source registration path
-and `client.LayerTintSource`. The throwaway item, component, models and textures stayed on the branch,
-so `LayerTintSource.calculate` currently returns white. Phase 1 wires it to a real part material — that
-is the one thing missing, not the mechanism.
+State: PLAN.md Phase 1 (the vertical slice) is in. One sword item, two part slots, three materials,
+assembled in the vanilla crafting table. Phase 0's spike lives on branch `phase-0/tint-spike`; nothing
+from it is needed any more.
 
 ## Version context
 
@@ -114,11 +112,35 @@ classes `@Environment(EnvType.CLIENT)` (Architectury turns it into `@OnlyIn`): N
 `@OnlyIn` members, and in dev it logs ERRORs and shows a load-warning screen for any mod class carrying
 it. Keep client code client-only by reachability.
 
-Registration notes, learned in Phase 0 and needed again in Phase 1. Items and data component types go
-through Architectury's `DeferredRegister`, registered from `Temper.init()`. A 26.1 item needs
+Registration notes. Items, data component types, recipe serializers and creative tabs go through
+Architectury's `DeferredRegister`, registered from `Temper.init()`. A 26.1 item needs
 `Item.Properties().setId(ResourceKey)`. Do not resolve one `RegistrySupplier` inside another's register
 lambda (a component type used as an item default, say): registry event order differs per loader.
-Per-stack data belongs on the stack, set on assembly, which is what PLAN.md wants anyway.
+
+**Never build an `ItemStack` during `init()`.** It throws `NullPointerException: Components not bound
+yet`, because the item registry has not bound its component maps at that point. Anything that needs a
+stack waits for a later moment, such as creative tab population or a recipe being matched.
+
+## How a tool is built
+
+`temper/materials.json` in the mod jar is the material table, loaded once on both sides by
+`TemperMaterials`, so the client has the colours and the server has the stats with nothing to sync. The
+head numbers are vanilla's own `ToolMaterial` constants; the handle multipliers are Temper's and
+straddle 1.0. Adding a material is one entry there and nothing else: its combinations, its recipes and
+its creative tab entries all follow.
+
+`SwordAssembly` is PLAN.md section 5 in code. It runs once per assembly and writes the result into the
+stack's components, never recomputing per tick. The stack carries `temper:parts`, which is the tool's
+identity, plus the derived `max_damage`, `attribute_modifiers` and `enchantable`.
+
+`SwordAssemblyRecipe` is a `CustomRecipe` in the ordinary crafting table, in vanilla's own sword shape:
+two head cells over one handle cell. It reads the materials from the table rather than from the recipe,
+so there is one recipe file no matter how many materials exist. `CraftingInput` arrives cropped to its
+filled cells, so the shape check is `width() == 1 && height() == 3`.
+
+The first time the creative tab is built it logs the whole calibration table, one line per combination.
+That log is the artefact PLAN.md's definition of done gets checked against: a sword with an iron head
+and an iron handle must land exactly on the vanilla iron sword.
 
 Item appearance takes two files per item. `assets/temper/items/<item>.json` is the client item model
 definition and carries the tints:

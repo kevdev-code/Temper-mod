@@ -11,14 +11,13 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
 import io.github.kevdev_code.temper.Temper;
+import io.github.kevdev_code.temper.material.TemperMaterial;
+import io.github.kevdev_code.temper.material.TemperMaterials;
+import io.github.kevdev_code.temper.tool.ToolParts;
 
 /**
- * Tints one model layer of a Temper tool, registered under {@code temper:layer}. An item model
- * definition names this source once per layer, and {@code layer} says which part slot that layer draws.
- *
- * <p>The colour lookup is deliberately absent. Phase 0 proved the mechanism against a throwaway
- * component; Phase 1 replaces it with the real per-slot material, which is the only thing this class
- * still needs.
+ * Tints one model layer with the colour of whatever material fills that part slot. This is the whole
+ * reason the mod's textures are grayscale: one texture per part, every material for free.
  */
 public record LayerTintSource(int layer) implements ItemTintSource {
     public static final Identifier ID = Identifier.fromNamespaceAndPath(Temper.MOD_ID, "layer");
@@ -26,11 +25,19 @@ public record LayerTintSource(int layer) implements ItemTintSource {
             Codec.INT.fieldOf("layer").forGetter(LayerTintSource::layer)
     ).apply(instance, LayerTintSource::new));
 
+    private static final int UNTINTED = 0xFFFFFF;
+
     @Override
-    public int calculate(ItemStack stack, ClientLevel level, LivingEntity entity) {
-        // ponytail: untinted until Phase 1 reads the part material off the stack. White is the honest
-        // placeholder — a tool that renders grey cannot be mistaken for a working lookup.
-        return ARGB.opaque(0xFFFFFF);
+    public int calculate(final ItemStack stack, final ClientLevel level, final LivingEntity entity) {
+        ToolParts parts = stack.get(Temper.TOOL_PARTS.get());
+        if (parts == null) {
+            return ARGB.opaque(UNTINTED);
+        }
+        Identifier material = parts.atLayer(layer);
+        if (material == null) {
+            return ARGB.opaque(UNTINTED);
+        }
+        return ARGB.opaque(TemperMaterials.get(material).map(TemperMaterial::color).orElse(UNTINTED));
     }
 
     @Override

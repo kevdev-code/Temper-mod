@@ -1,0 +1,10 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "temper:item/sword",
+    "tints": [
+      { "type": "temper:layer", "layer": 0 },
+      { "type": "temper:layer", "layer": 1 }
+    ]
+  }
+}
