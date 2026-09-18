@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "temper",
+  "version": "${version}",
+  "name": "Temper",
+  "description": "This is an example description! Tell everyone what your mod is about!",
+  "authors": [
+    "Me!"
+  ],
+  "contact": {
+    "homepage": "https://fabricmc.net/",
+    "sources": "https://github.com/FabricMC/fabric-example-mod"
+  },
+  "license": "CC0-1.0",
+  "icon": "assets/temper/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "io.github.kevdev_code.temper.fabric.TemperFabric"
+    ],
+    "client": [
+      "io.github.kevdev_code.temper.fabric.client.TemperFabricClient"
+    ]
+  },
+  "mixins": [
+    "temper.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "~26.1.2",
+    "java": ">=25",
+    "architectury": ">=20.0.12",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "another-mod": "*"
+  }
+}
