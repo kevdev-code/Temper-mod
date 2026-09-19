@@ -1,5 +1,6 @@
 package io.github.kevdev_code.temper.tool;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -10,17 +11,20 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
+import net.minecraft.world.item.component.ItemLore;
 import net.minecraft.world.item.enchantment.Enchantable;
 
 import io.github.kevdev_code.temper.Temper;
 import io.github.kevdev_code.temper.material.TemperMaterial;
 import io.github.kevdev_code.temper.material.TemperMaterials;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 /**
- * Turns two materials into a finished sword. This is PLAN.md section 5 in code, and it runs once per
- * assembly, never per tick: every number it derives is baked into the stack's components.
+ * Turns a set of materials into a finished sword. This is PLAN.md section 5 in code, and it runs once
+ * per assembly, never per tick: every number it derives is baked into the stack's components.
  */
 public final class SwordAssembly {
 
@@ -39,20 +43,34 @@ public final class SwordAssembly {
     private SwordAssembly() {
     }
 
-    /** Empty when either id is unknown or the material is not allowed in that slot. */
-    public static Optional<ItemStack> assemble(final Identifier handleId, final Identifier headId) {
-        Optional<TemperMaterial> handle = TemperMaterials.get(handleId).filter(m -> m.allows(PartSlot.HANDLE));
-        Optional<TemperMaterial> head = TemperMaterials.get(headId).filter(m -> m.allows(PartSlot.HEAD));
-        if (handle.isEmpty() || head.isEmpty()) {
-            return Optional.empty();
+    /** Empty when a material is unknown or is not allowed in the slot it was given. */
+    public static Optional<ItemStack> assemble(final ToolParts parts) {
+        for (PartSlot slot : PartSlot.values()) {
+            Optional<Identifier> id = parts.get(slot);
+            if (id.isEmpty()) {
+                if (!slot.isOptional()) {
+                    return Optional.empty();
+                }
+                continue;
+            }
+            if (TemperMaterials.get(id.get()).filter(m -> m.allows(slot)).isEmpty()) {
+                return Optional.empty();
+            }
         }
-        return Optional.of(build(handleId, handle.get(), headId, head.get()));
+        return Optional.of(build(parts));
     }
 
-    private static ItemStack build(final Identifier handleId, final TemperMaterial handle,
-                                   final Identifier headId, final TemperMaterial head) {
+    private static TemperMaterial material(final ToolParts parts, final PartSlot slot) {
+        return TemperMaterials.get(parts.get(slot).orElseThrow()).orElseThrow();
+    }
+
+    private static ItemStack build(final ToolParts parts) {
+        TemperMaterial head = material(parts, PartSlot.HEAD);
+        TemperMaterial handle = material(parts, PartSlot.HANDLE);
+        TemperMaterial binding = material(parts, PartSlot.BINDING);
+
         ItemStack stack = new ItemStack(Temper.SWORD.get());
-        stack.set(Temper.TOOL_PARTS.get(), new ToolParts(handleId, headId));
+        stack.set(Temper.TOOL_PARTS.get(), parts);
 
         // durability = head.baseDurability * handle.durabilityMultiplier
         int durability = Math.max(1, Math.round(head.head().durability() * handle.handle().durabilityMultiplier()));
@@ -76,14 +94,34 @@ public final class SwordAssembly {
                         EquipmentSlotGroup.MAINHAND)
                 .build());
 
-        // ponytail: enchantability comes off the head because Phase 1 has no binding. PLAN.md section 4
-        // gives it to the binding, so Phase 2 moves this one line and the rest stands.
-        stack.set(DataComponents.ENCHANTABLE, new Enchantable(head.head().enchantmentValue()));
+        // enchantValue = binding.enchantability, as PLAN.md section 4 has it.
+        stack.set(DataComponents.ENCHANTABLE, new Enchantable(binding.binding().enchantmentValue()));
 
         stack.set(DataComponents.ITEM_NAME, Component.translatable("item.temper.sword.assembled",
-                Component.translatable(materialKey(headId)),
-                Component.translatable(materialKey(handleId))));
+                Component.translatable(materialKey(parts.head()))));
+        stack.set(DataComponents.LORE, new ItemLore(lore(parts, binding)));
         return stack;
+    }
+
+    /**
+     * The parts the name cannot carry, plus the modifier slots the binding grants. Those slots hold
+     * nothing yet: modifiers arrive in Phase 6, and the reinforcement's behavioural trait with them.
+     */
+    private static List<Component> lore(final ToolParts parts, final TemperMaterial binding) {
+        List<Component> lines = new ArrayList<>();
+        lines.add(line("tooltip.temper.handle", Component.translatable(materialKey(parts.handle()))));
+        lines.add(line("tooltip.temper.binding", Component.translatable(materialKey(parts.binding()))));
+        lines.add(parts.reinforcement()
+                .map(id -> line("tooltip.temper.reinforcement", Component.translatable(materialKey(id))))
+                .orElseGet(() -> Component.translatable("tooltip.temper.reinforcement.none")
+                        .withStyle(ChatFormatting.DARK_GRAY)));
+        lines.add(line("tooltip.temper.modifier_slots", Component.literal(
+                String.valueOf(binding.binding().modifierSlots()))));
+        return List.copyOf(lines);
+    }
+
+    private static Component line(final String key, final Component value) {
+        return Component.translatable(key, value).withStyle(ChatFormatting.GRAY);
     }
 
     public static String materialKey(final Identifier material) {
@@ -91,17 +129,18 @@ public final class SwordAssembly {
     }
 
     /**
-     * Reads the finished numbers back off the stack, so what gets reported is what was actually written
-     * rather than the arithmetic repeated. PLAN.md wants these checked against vanilla's tiers: a sword
-     * with an iron head and an iron handle should land exactly on the vanilla iron sword.
+     * Reads the finished numbers back off the stack, so what gets reported is what was actually
+     * written rather than the arithmetic repeated. PLAN.md wants these checked against vanilla's
+     * tiers: a sword whose parts are all iron should land exactly on the vanilla iron sword.
      */
     public static String describe(final ItemStack stack) {
         ToolParts parts = stack.get(Temper.TOOL_PARTS.get());
         ItemAttributeModifiers attributes = stack.getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY);
         Enchantable enchantable = stack.get(DataComponents.ENCHANTABLE);
-        return "%s head / %s handle: durability %d, damage %.1f, speed %.2f/s, enchantability %d".formatted(
+        return "%s head / %s handle / %s binding: durability %d, damage %.1f, speed %.2f/s, enchantability %d".formatted(
                 parts == null ? "?" : parts.head().getPath(),
                 parts == null ? "?" : parts.handle().getPath(),
+                parts == null ? "?" : parts.binding().getPath(),
                 stack.getOrDefault(DataComponents.MAX_DAMAGE, 0),
                 attributes.compute(Attributes.ATTACK_DAMAGE, PLAYER_BASE_ATTACK_DAMAGE, EquipmentSlot.MAINHAND),
                 attributes.compute(Attributes.ATTACK_SPEED, PLAYER_BASE_ATTACK_SPEED, EquipmentSlot.MAINHAND),

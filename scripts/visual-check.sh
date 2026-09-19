@@ -91,8 +91,15 @@ for _ in $(seq 1 150); do
 done
 sleep 12
 
+# Capture the client this script launched, by id. Matching on the window title alone can pick a
+# different Minecraft window, such as one an earlier run left at the menu, and screenshot that.
+CLIENT_PID=$(powershell -NoProfile -Command "
+    Get-CimInstance Win32_Process -Filter \"Name='java.exe'\" |
+        Where-Object { \$_.CommandLine -like '*architectury.main.class*' -and \$_.CommandLine -like '*${WIN_ROOT}\\${PLATFORM}*' } |
+        Select-Object -First 1 -ExpandProperty ProcessId" | tr -d '[:space:]')
+echo "==> client pid ${CLIENT_PID:-unknown}"
 powershell -NoProfile -ExecutionPolicy Bypass -File "$ROOT/scripts/screenshot-window.ps1" \
-    -Out "$(cygpath -w "$ROOT/$SHOT")" -TitleLike 'Minecraft*'
+    -Out "$(cygpath -w "$ROOT/$SHOT")" -ProcessId "${CLIENT_PID:-0}" -TitleLike 'Minecraft*'
 
 echo "==> log evidence"
 grep -nE "Temper (common|client) init|- temper |Temper 1\.[0-9.]+ \(temper\)|joined the game|FAILURE:|Exception in|Crash Report|/ERROR" "$LOG" |

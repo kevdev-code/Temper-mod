@@ -3,6 +3,8 @@
   "textures": {
     "layer0": "temper:item/sword_handle",
     "layer1": "temper:item/sword_head",
-    "layer2": "temper:item/sword_grip"
+    "layer2": "temper:item/sword_grip",
+    "layer3": "temper:item/sword_binding",
+    "layer4": "temper:item/sword_reinforcement"
   }
 }

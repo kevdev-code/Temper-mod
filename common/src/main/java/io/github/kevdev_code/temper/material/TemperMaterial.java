@@ -17,18 +17,20 @@ import java.util.List;
  * One row of the material table. Everything here comes from {@code temper/materials.json}; adding a
  * material is a new entry in that file, never a new class.
  *
- * <p>The head numbers are vanilla's own {@code ToolMaterial} constants for 26.1.2, so a tool whose head
- * is material X lands on vanilla's tier for X. The handle multipliers are Temper's own and straddle
- * 1.0, which is what keeps the handle a real choice instead of a strictly better option.
+ * <p>The head numbers are vanilla's own {@code ToolMaterial} constants for 26.1.2, so a tool whose
+ * head is material X lands on vanilla's tier for X. The handle multipliers and the binding numbers
+ * are Temper's own. Each block is named for the slot it applies through: a material's personality
+ * reaches the tool only via the part it occupies, which is what makes the combination space
+ * interesting rather than merely large.
  */
-public record TemperMaterial(int color, String ingredient, Head head, Handle handle, List<PartSlot> validParts) {
+public record TemperMaterial(int color, String ingredient, Head head, Handle handle, Binding binding,
+                             List<PartSlot> validParts) {
 
     /** Absolute values. PLAN.md section 5: the head contributes these, the handle scales them. */
-    public record Head(int durability, float attackDamageBonus, int enchantmentValue) {
+    public record Head(int durability, float attackDamageBonus) {
         public static final Codec<Head> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.INT.fieldOf("durability").forGetter(Head::durability),
-                Codec.FLOAT.fieldOf("attack_damage_bonus").forGetter(Head::attackDamageBonus),
-                Codec.INT.fieldOf("enchantment_value").forGetter(Head::enchantmentValue)
+                Codec.FLOAT.fieldOf("attack_damage_bonus").forGetter(Head::attackDamageBonus)
         ).apply(i, Head::new));
     }
 
@@ -40,6 +42,18 @@ public record TemperMaterial(int color, String ingredient, Head head, Handle han
         ).apply(i, Handle::new));
     }
 
+    /**
+     * How much the tool can be customised. Enchantability lives here rather than on the head, which
+     * is what PLAN.md section 4 asks for, and the slot count is the trade that stops the binding
+     * being the ignorable part Tinkers' made it: more slots usually means less enchantability.
+     */
+    public record Binding(int enchantmentValue, int modifierSlots) {
+        public static final Codec<Binding> CODEC = RecordCodecBuilder.create(i -> i.group(
+                Codec.INT.fieldOf("enchantment_value").forGetter(Binding::enchantmentValue),
+                Codec.INT.fieldOf("modifier_slots").forGetter(Binding::modifierSlots)
+        ).apply(i, Binding::new));
+    }
+
     private static final Codec<Integer> RGB_CODEC = Codec.STRING.xmap(
             text -> Integer.parseInt(text.startsWith("#") ? text.substring(1) : text, 16),
             value -> "#%06X".formatted(value));
@@ -49,6 +63,7 @@ public record TemperMaterial(int color, String ingredient, Head head, Handle han
             Codec.STRING.fieldOf("ingredient").forGetter(TemperMaterial::ingredient),
             Head.CODEC.fieldOf("head").forGetter(TemperMaterial::head),
             Handle.CODEC.fieldOf("handle").forGetter(TemperMaterial::handle),
+            Binding.CODEC.fieldOf("binding").forGetter(TemperMaterial::binding),
             PartSlot.CODEC.listOf().fieldOf("valid_parts").forGetter(TemperMaterial::validParts)
     ).apply(i, TemperMaterial::new));
 

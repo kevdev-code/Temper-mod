@@ -61,33 +61,46 @@ TRANSPARENT = (0, 0, 0, 0)
 # blade ends at |v| = 2; 7 is vanilla's reach and makes the cross read as its own piece.
 GUARD_REACH = 7
 
-# Boxes of (u range, v range) per zone. Tip first.
+# Boxes of (u range, v range) per zone, v signed. Tip first.
 ZONES = {
-    "blade":  [((-2, 15), (-2, 2))],
-    "guard":  [((-5, -3), (-GUARD_REACH, GUARD_REACH)),   # the bar, symmetric about the axis
-               ((-6, -6), (-1, 1))],                       # its underside narrows into the grip
-    "grip":   [((-10, -7), (-2, 1))],    # four wide, offset toward the lit side (negative v)
-    "pommel": [((-15, -11), (-3, 3))],
+    "blade":         [((-2, 15), (-2, 2))],
+    "reinforcement": [((-2, 1), (3, 6)),                         # langets clasping the blade's base,
+                      ((-2, 1), (-6, -3))],                      # one tab each side, mirrored
+    "guard":         [((-5, -3), (-GUARD_REACH, GUARD_REACH)),   # the bar, symmetric about the axis
+                      ((-6, -6), (-1, 1))],                      # its underside narrows into the grip
+    "grip":          [((-10, -7), (-2, 1))],   # four wide, offset toward the lit side (negative v)
+    "pommel":        [((-15, -11), (-3, 3))],
 }
 
-# Who carries the dark seam: the lower rank does. Grip highest so it stays leather to its edges.
-RANK = {"grip": 4, "blade": 3, "guard": 2, "pommel": 1}
+# Who carries the dark seam: the lower rank does. Grip highest so it stays leather to its edges;
+# reinforcement highest, because it is applied on top of the blade: the blade takes the seam, which it
+# was already drawing as its own edge there, so the small tabs keep their fill instead of going all dark.
+RANK = {"reinforcement": 5, "grip": 4, "blade": 3, "guard": 2, "pommel": 1}
 
-# Zone -> tint layer. Phase 2 change: "guard": "binding".
+# Zone -> tint layer. This and LAYER_ORDER below are the only places the mapping exists, and the
+# game's two JSON files are generated from them, so a layer can never drift from its slot.
 LAYER = {
     "blade": "head",
-    "guard": "handle",
+    "guard": "binding",
     "grip": "grip",
     "pommel": "handle",
+    "reinforcement": "reinforcement",
 }
+
+# Model layer index -> layer name. The index is the position in the item model's texture list and in
+# its tint list; it is NOT a part slot index, and past layer 1 the two no longer agree. Every layer
+# but the grip names a PartSlot; the grip is a constant colour.
+LAYER_ORDER = ["handle", "head", "grip", "binding", "reinforcement"]
 
 # Grey ladders per layer: (lit, body, shade, edge, seam). The edge is the outer silhouette and
 # stays near black; a seam is the line between two zones and only needs to separate them, so it
 # sits at 33..40%, still dark by the brief but leaving the small metal zones some colour.
 TONES = {
-    "head":   (0xFF, 0xE6, 0x8C, 0x33, 0x66),    # 100 / 90 / 55 / 20 / 40 %
-    "handle": (0xBF, 0x80, 0x54, 0x2E, 0x55),    #  75 / 50 / 33 / 18 / 33 %
-    "grip":   (0xFF, 0xCC, 0xA6, 0x66, 0x8A),    # 100 / 80 / 65 / 40 / 54 %, then multiplied by LEATHER
+    "head":          (0xFF, 0xE6, 0x8C, 0x33, 0x66),   # 100 / 90 / 55 / 20 / 40 %
+    "handle":        (0xBF, 0x80, 0x54, 0x2E, 0x55),   #  75 / 50 / 33 / 18 / 33 %
+    "binding":       (0xBF, 0x80, 0x54, 0x2E, 0x55),   # the same metal band; it never touches the handle
+    "reinforcement": (0xD9, 0x9B, 0x6B, 0x2E, 0x55),   #  85 / 61 / 42 %, a touch brighter: it is the accent
+    "grip":          (0xFF, 0xCC, 0xA6, 0x66, 0x8A),   # 100 / 80 / 65 / 40 / 54 %, then times LEATHER
 }
 LEATHER = 0x8B5E3C                          # darker and redder than oak, so a wood blade on a wood handle still reads as two pieces
 
@@ -147,6 +160,8 @@ def fill_tone(zone, x, y):
         return lit if u >= -4 else shade
     if zone == "grip":                        # even width: the two core pixels are lit and shade
         return lit if v <= -1 else shade
+    if zone == "reinforcement":               # two separate tabs; light each on its own upper edge
+        return lit if abs(v) <= 4 else (body if abs(v) == 5 else shade)
     return lit if v < 0 else (body if v == 0 else shade)
 
 
@@ -171,9 +186,15 @@ def build():
     return pixels, zones
 
 
-def tinted(pixels, zones, head_rgb, handle_rgb, binding_rgb=None):
-    """What the game shows: each layer's grey multiplied by its colour; the grip by LEATHER."""
-    colour = {"head": head_rgb, "handle": handle_rgb, "binding": binding_rgb or handle_rgb, "grip": LEATHER}
+def tinted(pixels, zones, head_rgb, handle_rgb, binding_rgb=None, reinforcement_rgb=None):
+    """
+    What the game shows: each layer's grey multiplied by its colour, the grip by LEATHER.
+    Binding and reinforcement fall back to the handle, which is what a vanilla sword looks like:
+    one material for the whole hilt.
+    """
+    colour = {"head": head_rgb, "handle": handle_rgb, "grip": LEATHER,
+              "binding": binding_rgb if binding_rgb is not None else handle_rgb,
+              "reinforcement": reinforcement_rgb if reinforcement_rgb is not None else handle_rgb}
     out = [[TRANSPARENT] * SIZE for _ in range(SIZE)]
     for y in range(SIZE):
         for x in range(SIZE):
@@ -186,7 +207,8 @@ def tinted(pixels, zones, head_rgb, handle_rgb, binding_rgb=None):
 
 def audit(pixels, zones):
     problems = []
-    ranges = {"head": (0.55, 1.0), "handle": (0.33, 0.75)}     # the calibrated ladders; the floor keeps fills off black
+    ranges = {"head": (0.55, 1.0), "handle": (0.33, 0.75),      # the calibrated ladders; the floor keeps fills off black
+              "binding": (0.33, 0.75), "reinforcement": (0.33, 0.90)}
     for layer, (lo, hi) in ranges.items():
         fills = {pixels[y][x][0] for y in range(SIZE) for x in range(SIZE)
                  if zones[y][x] and LAYER[zones[y][x]] == layer and not OUTLINE_MASK[y][x]}
@@ -254,7 +276,8 @@ def zone_fill_counts(pixels, zones):
 
 def as_text(pixels, zones=None):
     order = sorted({p[0] for row in pixels for p in row if p[3]}, reverse=True)
-    chars, marks = "@%+=-:#", {"blade": "B", "guard": "G", "grip": "g", "pommel": "P"}
+    chars = "@%+=-:#"
+    marks = {"blade": "B", "guard": "G", "grip": "g", "pommel": "P", "reinforcement": "R"}
     return "\n".join(
         "".join("." if not pixels[y][x][3] else (marks[zones[y][x]] if zones else chars[min(order.index(pixels[y][x][0]), 6)])
                 for x in range(SIZE))
@@ -389,89 +412,56 @@ def compare_guard(out_path, scale=8):
     print(f"wrote {out_path}  ({width}x{height})")
 
 
-def export_layers(out_dir):
+def export_layers(root):
     """
-    Splits the approved sprite into the game's textures by the zone map alone: every pixel keeps
-    its grey value and lands in the file of its LAYER. Nothing is redrawn. Also prints the constant
-    the item model definition needs for the grip layer.
+    Writes what the game loads: one grayscale texture per tint layer, plus the item model and the
+    item model definition. Everything comes from LAYER_ORDER and LAYER, so the layer a texture sits
+    on, the layer its tint sits on, and the part slot that tint reads can never disagree. Pixels are
+    not redrawn: each keeps its grey and lands in the file of its layer.
     """
+    import json
+
     from PIL import Image
 
     pixels, zones = build()
-    files = {"head": "sword_head.png", "handle": "sword_handle.png", "grip": "sword_grip.png"}
-    os.makedirs(out_dir, exist_ok=True)
-    for layer, name in files.items():
-        im = Image.new("RGBA", (SIZE, SIZE))
-        im.putdata([pixels[y][x] if zones[y][x] and LAYER[zones[y][x]] == layer else TRANSPARENT
-                    for y in range(SIZE) for x in range(SIZE)])
-        im.save(os.path.join(out_dir, name))
+    problems = audit(pixels, zones)
+    for problem in problems:
+        print("  audit:", problem)
+    if problems:
+        raise SystemExit("refusing to export a sprite that fails its own audit")
+
+    assets = os.path.join(root, "common", "src", "main", "resources", "assets", "temper")
+    textures = os.path.join(assets, "textures", "item")
+    os.makedirs(textures, exist_ok=True)
+    for layer in LAYER_ORDER:
+        image = Image.new("RGBA", (SIZE, SIZE))
+        image.putdata([pixels[y][x] if zones[y][x] and LAYER[zones[y][x]] == layer else TRANSPARENT
+                       for y in range(SIZE) for x in range(SIZE)])
+        image.save(os.path.join(textures, f"sword_{layer}.png"))
+        drawn = [z for z in ZONES if LAYER[z] == layer]
         n = sum(1 for y in range(SIZE) for x in range(SIZE) if zones[y][x] and LAYER[zones[y][x]] == layer)
-        print(f"  {name:<18} {n:2d} px  <- zones " + ", ".join(z for z in ZONES if LAYER[z] == layer))
-    print(f"  grip constant tint: {LEATHER} (#{LEATHER:06X}), for minecraft:constant \"value\"")
+        print(f"  layer {LAYER_ORDER.index(layer)}  sword_{layer}.png  {n:2d} px  <- " + ", ".join(drawn))
+
+    model = {"parent": "minecraft:item/handheld",
+             "textures": {f"layer{i}": f"temper:item/sword_{name}" for i, name in enumerate(LAYER_ORDER)}}
+    write_json(os.path.join(assets, "models", "item", "sword.json"), model)
+
+    # The grip is the only layer with no part behind it, so it is the only constant tint.
+    tints = [{"type": "minecraft:constant", "value": LEATHER} if name == "grip"
+             else {"type": "temper:part", "slot": name} for name in LAYER_ORDER]
+    definition = {"model": {"type": "minecraft:model", "model": "temper:item/sword", "tints": tints}}
+    write_json(os.path.join(assets, "items", "sword.json"), definition)
+    print(f"  grip constant: {LEATHER} (#{LEATHER:06X})")
+    print("  tint order: " + ", ".join(t.get("slot", "constant") for t in tints))
 
 
-def calibrate_sheet(out_path, ref_dir, scale=8):
-    """Vanilla's sword, ours before calibration, ours after: wood, iron, diamond, at 8x and 1:1."""
-    global TONES, LEATHER
-    from PIL import Image, ImageDraw, ImageFont
-
-    def to_image(px):
-        im = Image.new("RGBA", (SIZE, SIZE))
-        im.putdata([p for row in px for p in row])
-        return im
-
-    def up(im, s):
-        return im.resize((SIZE * s, SIZE * s), Image.NEAREST)
-
-    refs = {"wood": "wooden_sword.png", "iron": "iron_sword.png", "diamond": "diamond_sword.png"}
-    saved_tones, saved_leather = TONES, LEATHER
-    TONES, LEATHER = BEFORE["tones"], BEFORE["leather"]
-    before_px, before_zn = build()
-    TONES, LEATHER = saved_tones, saved_leather
-    after_px, after_zn = build()
-
-    font, bold = ImageFont.load_default(size=12), ImageFont.load_default(size=14)
-    cell, pad = SIZE * scale, 12
-    width = 3 * cell + 4 * pad + 130
-    height = pad + 22 + 3 * (cell + 28) + pad
-    out = Image.new("RGB", (width, height), (34, 34, 38))
-    draw = ImageDraw.Draw(out)
-
-    def checker(x0, y0, w, h, s):
-        for cy in range(0, h, s):
-            for cx in range(0, w, s):
-                shade = (58, 58, 62) if ((cx // s + cy // s) % 2 == 0) else (46, 46, 50)
-                draw.rectangle([x0 + cx, y0 + cy, x0 + cx + s - 1, y0 + cy + s - 1], fill=shade)
-
-    def place(im, x, y, s):
-        checker(x, y, SIZE * s, SIZE * s, s if s > 1 else 2)
-        out.paste(up(im, s), (x, y), up(im, s))
-
-    y = pad
-    for i, title in enumerate(("vanilla", "ours, current", "ours, corrected")):
-        draw.text((pad + i * (cell + pad), y), title, font=bold, fill=(230, 230, 236))
-    draw.text((4 * pad + 3 * cell, y), "1:1 in the same order", font=bold, fill=(230, 230, 236))
-    y += 22
-    for name, ref in refs.items():
-        vanilla = Image.open(os.path.join(ref_dir, ref)).convert("RGBA")
-        before = to_image(tinted(before_px, before_zn, BEFORE["materials"][name], BEFORE["materials"][name]))
-        # tint with the old leather too, so the "before" column is exactly what shipped
-        saved = globals()["LEATHER"]; globals()["LEATHER"] = BEFORE["leather"]
-        before = to_image(tinted(before_px, before_zn, BEFORE["materials"][name], BEFORE["materials"][name]))
-        globals()["LEATHER"] = saved
-        after = to_image(tinted(after_px, after_zn, MATERIALS[name], MATERIALS[name]))
-        for i, im in enumerate((vanilla, before, after)):
-            place(im, pad + i * (cell + pad), y, scale)
-        x = 4 * pad + 3 * cell
-        for im in (vanilla, before, after):
-            place(im, x, y + cell // 2 - SIZE, 1)
-            x += SIZE + 8
-        draw.text((pad, y + cell + 6), f"{name}: head and handle both {name}", font=font, fill=(200, 200, 208))
-        y += cell + 28
-
-    os.makedirs(os.path.dirname(out_path), exist_ok=True)
-    out.save(out_path)
-    print(f"wrote {out_path}  ({width}x{height})")
+def write_json(path, data):
+    import json
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(data, f, indent=2)
+        f.write("\n")
+    print(f"  wrote {os.path.basename(path)}")
 
 
 def main():
@@ -488,7 +478,7 @@ def main():
                         os.path.join(root, "build", "texture-drafts", "ref"))
         return
     if args.export:
-        export_layers(os.path.join(root, "common", "src", "main", "resources", "assets", "temper", "textures", "item"))
+        export_layers(root)
         return
     if args.guard_compare:
         compare_guard(os.path.join(root, "build", "texture-drafts", "guard-arm-compare.png"))

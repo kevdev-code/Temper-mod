@@ -291,8 +291,15 @@ Not in 1.0, not forgotten:
 
 ## 15. Open questions
 
-- Does a tool with an empty reinforcement slot render a fourth layer at all, or is the
-  layer omitted?
+**Answered in Phase 2.** _Does a tool with an empty reinforcement slot render its layer at all?_
+It draws nothing. The layer is always present in the model — there is one model, not two — and the
+tint source returns a fully transparent colour when the slot is empty, so the layer contributes no
+pixels. Two reasons. A part that is not there should not be drawn: any placeholder colour invents a
+material the tool does not have and reads as a rendering fault, while an absent piece reads as an
+empty slot, which is the truth and is useful feedback. And the alternative, a second model selected
+by a condition, would mean maintaining two copies of the layer list, which is exactly the duplication
+that lets a layer drift away from its slot.
+
 - What happens to existing vanilla tools in a world where Temper is installed —
   coexist silently, or is there a conversion path?
 - Do parts stack? A stack of identical iron sword heads is convenient but complicates

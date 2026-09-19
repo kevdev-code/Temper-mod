@@ -23,6 +23,10 @@ import io.github.kevdev_code.temper.recipe.SwordAssemblyRecipe;
 import io.github.kevdev_code.temper.tool.SwordAssembly;
 import io.github.kevdev_code.temper.tool.ToolParts;
 
+import java.util.LinkedHashSet;
+import java.util.Optional;
+import java.util.Set;
+
 import java.util.List;
 
 public final class Temper {
@@ -71,25 +75,38 @@ public final class Temper {
         RECIPE_SERIALIZERS.register();
         CREATIVE_TABS.register();
 
-        // ponytail: one dump of the calibration table per run, which is what PLAN.md's definition of
-        // done gets checked against. Drop it once the combination count outgrows a readable log.
-        LifecycleEvent.SERVER_STARTED.register(server ->
-                everySword().forEach(stack -> LOGGER.info("sword {}", SwordAssembly.describe(stack))));
+        // ponytail: three lines, the tools whose every part is one material, which are exactly the
+        // ones PLAN.md calibrates against vanilla. The full space is 108 combinations and does not
+        // belong in a log; the tooltip carries the rest.
+        LifecycleEvent.SERVER_STARTED.register(server -> TemperMaterials.ids().forEach(id ->
+                SwordAssembly.assemble(new ToolParts(id, id, id, Optional.empty()))
+                        .ifPresent(stack -> LOGGER.info("sword {}", SwordAssembly.describe(stack)))));
 
         LOGGER.info("Temper common init");
     }
 
     /**
-     * Every head and handle pairing the material table allows, in a stable order.
-     *
-     * <p>This cannot run during {@link #init()}: building an {@link ItemStack} before the item registry
-     * binds its components throws "Components not bound yet". Server start and creative tab population
-     * are both late enough.
+     * What the creative tab offers. The full space is 108 combinations, which is not a menu, so this
+     * is a spanning set: every head against every handle, then the binding and the reinforcement
+     * varied on a fixed base so each material is shown in each of the four slots at least once.
      */
     private static List<ItemStack> everySword() {
-        return TemperMaterials.ids().stream()
-                .flatMap(head -> TemperMaterials.ids().stream()
-                        .flatMap(handle -> SwordAssembly.assemble(handle, head).stream()))
-                .toList();
+        List<Identifier> ids = TemperMaterials.ids();
+        Identifier base = ids.contains(Identifier.fromNamespaceAndPath(MOD_ID, "iron"))
+                ? Identifier.fromNamespaceAndPath(MOD_ID, "iron") : ids.getFirst();
+        // A set: the loops below overlap, and a creative tab throws on a repeated stack.
+        Set<ToolParts> combinations = new LinkedHashSet<>();
+        for (Identifier head : ids) {
+            for (Identifier handle : ids) {
+                combinations.add(new ToolParts(handle, head, handle, Optional.empty()));
+            }
+        }
+        for (Identifier binding : ids) {
+            combinations.add(new ToolParts(base, base, binding, Optional.empty()));
+        }
+        for (Identifier reinforcement : ids) {
+            combinations.add(new ToolParts(base, base, base, Optional.of(reinforcement)));
+        }
+        return combinations.stream().flatMap(parts -> SwordAssembly.assemble(parts).stream()).toList();
     }
 }

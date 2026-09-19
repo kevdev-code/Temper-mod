@@ -15,7 +15,7 @@ public final class TemperClient {
      * event, so each loader hands in its own "put" and this decides what gets registered.
      */
     public static void init(BiConsumer<Identifier, MapCodec<? extends ItemTintSource>> registerTintSource) {
-        registerTintSource.accept(LayerTintSource.ID, LayerTintSource.MAP_CODEC);
+        registerTintSource.accept(PartTintSource.ID, PartTintSource.MAP_CODEC);
         Temper.LOGGER.info("Temper client init");
     }
 }

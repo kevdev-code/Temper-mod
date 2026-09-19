@@ -1,8 +1,13 @@
 {
   "item.temper.sword": "Temper Sword",
-  "item.temper.sword.assembled": "%s Sword, %s Grip",
+  "item.temper.sword.assembled": "%s Sword",
   "itemGroup.temper": "Temper",
   "material.temper.wood": "Wooden",
   "material.temper.iron": "Iron",
-  "material.temper.diamond": "Diamond"
+  "material.temper.diamond": "Diamond",
+  "tooltip.temper.handle": "Handle: %s",
+  "tooltip.temper.binding": "Binding: %s",
+  "tooltip.temper.reinforcement": "Reinforcement: %s",
+  "tooltip.temper.reinforcement.none": "No reinforcement",
+  "tooltip.temper.modifier_slots": "Modifier slots: %s"
 }
