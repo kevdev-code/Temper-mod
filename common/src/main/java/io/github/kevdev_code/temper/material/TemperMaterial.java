@@ -8,6 +8,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 
 import io.github.kevdev_code.temper.tool.PartSlot;
 
@@ -26,12 +27,23 @@ import java.util.List;
 public record TemperMaterial(int color, String ingredient, Head head, Handle handle, Binding binding,
                              List<PartSlot> validParts) {
 
-    /** Absolute values. PLAN.md section 5: the head contributes these, the handle scales them. */
-    public record Head(int durability, float attackDamageBonus) {
+    /**
+     * Absolute values. PLAN.md section 5: the head contributes these, the handle scales them. The
+     * mining speed and the drops tag are what vanilla's {@code ToolMaterial} carries as {@code speed}
+     * and {@code incorrectBlocksForDrops}; a tool that does not mine ignores them.
+     */
+    public record Head(int durability, float attackDamageBonus, float miningSpeed, String incorrectForDrops) {
         public static final Codec<Head> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.INT.fieldOf("durability").forGetter(Head::durability),
-                Codec.FLOAT.fieldOf("attack_damage_bonus").forGetter(Head::attackDamageBonus)
+                Codec.FLOAT.fieldOf("attack_damage_bonus").forGetter(Head::attackDamageBonus),
+                Codec.FLOAT.fieldOf("mining_speed").forGetter(Head::miningSpeed),
+                Codec.STRING.fieldOf("incorrect_for_drops").forGetter(Head::incorrectForDrops)
         ).apply(i, Head::new));
+
+        /** The blocks this head mines without dropping anything, vanilla's mining level in tag form. */
+        public TagKey<Block> incorrectForDropsTag() {
+            return TagKey.create(Registries.BLOCK, Identifier.parse(incorrectForDrops));
+        }
     }
 
     /** Multipliers, never absolutes, so four mediocre materials cannot sum into a good tool. */

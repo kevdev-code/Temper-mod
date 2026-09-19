@@ -1,0 +1,28 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "temper:item/pickaxe",
+    "tints": [
+      {
+        "type": "temper:part",
+        "slot": "handle"
+      },
+      {
+        "type": "temper:part",
+        "slot": "head"
+      },
+      {
+        "type": "minecraft:constant",
+        "value": 9133628
+      },
+      {
+        "type": "temper:part",
+        "slot": "binding"
+      },
+      {
+        "type": "temper:part",
+        "slot": "reinforcement"
+      }
+    ]
+  }
+}

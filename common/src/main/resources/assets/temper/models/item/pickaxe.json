@@ -1,0 +1,10 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "temper:item/pickaxe_handle",
+    "layer1": "temper:item/pickaxe_head",
+    "layer2": "temper:item/pickaxe_grip",
+    "layer3": "temper:item/pickaxe_binding",
+    "layer4": "temper:item/pickaxe_reinforcement"
+  }
+}

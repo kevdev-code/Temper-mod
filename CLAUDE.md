@@ -11,9 +11,10 @@ adding any gameplay feature. This file covers only how the repo works.
 Targets Minecraft **26.1.2**, Java **25**, Gradle 9.5.1, built with Architectury Loom for both
 **Fabric** and **NeoForge**. Base package is `io.github.kevdev_code.temper`.
 
-State: PLAN.md Phase 2 (full anatomy) is in. One sword item, four part slots, three materials,
-assembled in the vanilla crafting table. The reinforcement is a slot only: it is stored, drawn and
-shown in the tooltip, but its behavioural trait waits for Phase 6 with the modifiers.
+State: PLAN.md Phase 4 (tool coverage) in progress: sword and pickaxe are in, axe, shovel and hoe
+follow one at a time. Four part slots, three materials, assembled in the vanilla crafting table. The
+reinforcement is a slot only: it is stored, drawn and shown in the tooltip, but its behavioural trait
+waits for Phase 6 with the modifiers.
 
 ## Version context
 
@@ -92,6 +93,11 @@ verify by counting colours in a slot: the hotbar frame and the world behind it p
 for iron. The world in the shot is expendable; delete `<platform>/run/saves/<world>` and the next run
 regenerates it.
 
+`scripts/verify-tools.py <tool>` is the same checker for the tools `scripts/tool-sprite.py` draws
+(the pickaxe onward), with its own `--give`. Only one test datapack lives in a save at a time:
+`visual-check.sh` removes any earlier `temper_*` pack before copying the new one, because two packs
+each giving nine items fight over the nine hotbar slots and the checker only ever sees the hotbar.
+
 A run takes three shots a few seconds apart and the checker unions them: a sword only has to be
 readable in one. The creative screen opens by itself now and again and its tooltip hides a slot,
 which says nothing about the sprite. The checker also finds a sword by treating every pixel of the
@@ -153,14 +159,19 @@ head numbers are vanilla's own `ToolMaterial` constants; the handle multipliers 
 straddle 1.0. Adding a material is one entry there and nothing else: its combinations, its recipes and
 its creative tab entries all follow.
 
-`SwordAssembly` is PLAN.md section 5 in code. It runs once per assembly and writes the result into the
-stack's components, never recomputing per tick. The stack carries `temper:parts`, which is the tool's
-identity, plus the derived `max_damage`, `attribute_modifiers` and `enchantable`.
+`ToolAssembly` is PLAN.md section 5 in code, for every `ToolKind`. It runs once per assembly and writes
+the result into the stack's components, never recomputing per tick. The stack carries `temper:parts`,
+which is the tool's identity, plus the derived `max_damage`, `attribute_modifiers`, `enchantable` and,
+for a tool that mines, `tool` with vanilla's two rules: the head's `incorrect_for_drops` tag denies
+drops and the kind's mineable tag mines at the head's `mining_speed`. `ToolKind` holds what vanilla's
+`Items` gives each type, read off the jar: sword `(3.0f, -2.4f)`, pickaxe `(1.0f, -2.8f)`.
 
-`SwordAssemblyRecipe` is a `CustomRecipe` in the ordinary crafting table, in vanilla's own sword shape:
-two head cells over one handle cell. It reads the materials from the table rather than from the recipe,
-so there is one recipe file no matter how many materials exist. `CraftingInput` arrives cropped to its
-filled cells, so the shape check is `width() == 1 && height() == 3`.
+`ToolAssemblyRecipe` is one `CustomRecipe` for all tools; the recipe file names the kind and the kind
+carries its crafting shape as three strings (`H` head, `G` handle, `B` binding, `R` optional
+reinforcement, `.` must be empty): vanilla's own head-over-stick layout with the fittings hung off the
+left. It reads the materials from the table rather than from the recipe, so a new material adds every
+combination with no new file, and a new tool is one more shape on the enum plus a one-line recipe file.
+`CraftingInput` arrives cropped to its filled cells, so the shape is checked against that box.
 
 The first time the creative tab is built it logs the whole calibration table, one line per combination.
 That log is the artefact PLAN.md's definition of done gets checked against: a sword with an iron head
@@ -208,6 +219,23 @@ splits it by zone into one texture per layer and writes both JSON files: blade t
 the binding, pommel to the handle, langets at the blade's base to the reinforcement, and the grip to
 a fixed leather colour, because a grip is never solid diamond. Edit the script and re-export; never
 edit the PNGs or those two JSON files by hand.
+
+The pickaxe, and every tool after it, comes from `scripts/tool-sprite.py` by a different method,
+because drawing the pickaxe from a parametric model failed eight times: the base is vanilla's own
+iron PNG, read out of the game jar and never redrawn, with head and stick told apart by the PNG's own
+colours, plus three additions listed pixel by pixel (blades at the head's points for the binding, a
+knob on the butt for the reinforcement, a stretch of haft for the grip). Vanilla's iron tools are
+pure grey, so the head texture is the PNG's head as it stands; the stick is our wood colour times
+four greys, mapped onto the sword's hilt and grip ladders. Every comparison sheet the script renders
+carries a numbered grid: it is what let the pickaxe close in two rounds, because a correction can
+name a cell. Keep it for the axe, shovel and hoe.
+
+**Layers never share a pixel.** An empty reinforcement is hidden by tinting its layer transparent,
+and in the GUI a layer hidden that way also hides whatever another layer drew beneath it: the knob was
+first drawn over the haft's last pixel with the handle drawing it too, and a pickaxe without a
+reinforcement came up with a hole there, measured off the screenshot. `tool-sprite.py`'s audit refuses
+an overlap, and `verify-tools.py` compares the dark haft pixels the knob cups on purpose, so the case
+stays checked.
 
 ## Build quirks worth knowing
 
