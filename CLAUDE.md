@@ -97,6 +97,12 @@ regenerates it.
 `visual-check.sh` removes any earlier `temper_*` pack before copying the new one, because two packs
 each giving nine items fight over the nine hotbar slots and the checker only ever sees the hotbar.
 
+The give function starts with `clear @s`. The client is killed rather than closed, so a save
+usually keeps nothing, but one that does gets written with the previous tool's nine in the hotbar;
+the next tool's nine then land in the inventory, the hotbar shots never show them, and the tick
+guard hands out nine more every tick. NeoForge's save did this with axes, and the hoe before it had
+passed only because the creative screen happened to be open over the inventory.
+
 A run takes three shots a few seconds apart and the checker unions them: a sword only has to be
 readable in one. The creative screen opens by itself now and again and its tooltip hides a slot,
 which says nothing about the sprite. The checker also finds a sword by treating every pixel of the

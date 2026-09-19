@@ -194,7 +194,7 @@ def write_datapack(directory):
     put(os.path.join(functions, "tick.mcfunction"),
         "execute as @a unless items entity @s hotbar.* temper:sword run function temper_test:give\n")
 
-    lines = []
+    lines = ["clear @s"]                 # a save may still hold another tool's nine; see verify-tools.py
     for handle, head, binding, reinforcement in EXPECTED:
         parts = ['handle:"temper:%s"' % handle, 'head:"temper:%s"' % head, 'binding:"temper:%s"' % binding]
         if reinforcement:

@@ -161,7 +161,10 @@ def write_datapack(tool, directory):
     put(os.path.join(tags, "tick.json"), json.dumps({"values": ["temper_test:tick"]}) + "\n")
     put(os.path.join(functions, "tick.mcfunction"),
         f"execute as @a unless items entity @s hotbar.* temper:{tool} run function temper_test:give\n")
-    lines = []
+    # Start from an empty inventory. A save that got written with another tool's nine in the hotbar
+    # sends the next tool's nine into the inventory, where the hotbar shots never see them, and the
+    # tick guard then gives nine more every tick. NeoForge's save did exactly that with axes.
+    lines = ["clear @s"]
     for handle, head, binding, reinforcement in EXPECTED:
         parts = ['handle:"temper:%s"' % handle, 'head:"temper:%s"' % head, 'binding:"temper:%s"' % binding]
         if reinforcement:

@@ -72,10 +72,16 @@ TOOLS = {
         "vanilla": "iron_pickaxe.png",
         # The blades: the inner edge continues the arm's inner row (or column) straight and the
         # outer edge cuts diagonally to the new point, so both points lean in toward the haft as a
-        # real pick's do. Vanilla's own tip pixels, (5,3) and (13,11), join the blade and take the
-        # arm's core grey, since the arm now runs on past them.
-        "binding": {(5, 3): 0xC1, (4, 3): 0xC1, (3, 4): 0x44, (5, 4): 0x18, (4, 4): 0x18,
-                    (13, 11): 0xC1, (13, 12): 0xC1, (12, 13): 0x44, (12, 11): 0x18, (12, 12): 0x18},
+        # real pick's do. Vanilla's own tip pixels, (5,3) and (13,11), join the blade.
+        #
+        # The four pixels along each point's core sit at full white, not at the arm's body grey they
+        # first had. Vanilla puts this pickaxe's only highlights on the arms' flanks, at (6,3) and
+        # (13,10), not on the points; and the points are the one place where this pickaxe shows a
+        # second material, so the one piece that changes with the material was the one that got no
+        # light. That is exactly what the highlight rule in the audit exists to catch, and it did:
+        # the pickaxe shipped that way and the rule found it.
+        "binding": {(5, 3): 0xFF, (4, 3): 0xFF, (3, 4): 0x44, (5, 4): 0x18, (4, 4): 0x18,
+                    (13, 11): 0xFF, (13, 12): 0xFF, (12, 13): 0x44, (12, 11): 0x18, (12, 12): 0x18},
         # Three pixels cupping the haft's last pixel, (2,14), which stays haft: the stick is seen
         # entering the knob, as it enters the mace's pommel. Lit from the top left.
         "reinforcement": {(1, 14): 0xD9, (1, 15): 0x9B, (2, 15): 0x6B},
