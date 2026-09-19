@@ -223,6 +223,16 @@ Stats are computed on assembly and on modifier change, not on use.
 The riskiest system goes first. Nothing else is designed in detail until rendering
 is proven.
 
+**Phases 3 and 4 were swapped after Phase 2 shipped, and are listed here in the order they run.**
+The numbers still belong to their content, so Phase 4 is still tool coverage. Tool coverage adds no
+new API: it reuses the sprite zones, the material table, the assembly and the recipe, all of which
+are proven. Stations bring the project's first menus, screens and networking, which is where
+multiloader diverges most, and nothing else waits on them. Running coverage first also settles the
+surface question in section 15 with five tool types of evidence rather than with one sprite.
+
+The cost is accepted rather than overlooked: each tool type needs its own shape in the crafting
+table until the Assembly Bench exists, so some of those recipes are throwaway.
+
 ### Phase 0 — Rendering spike
 
 A throwaway item with two grayscale layers that tints from a hardcoded data component.
@@ -241,14 +251,14 @@ If this works, everything after it is adding rows to tables.
 
 Binding and reinforcement. Four-layer rendering. Modifier slot count driven by binding.
 
+### Phase 4 — Tool coverage
+
+Pickaxe, axe, shovel, hoe. Required for the replacement doctrine to hold.
+
 ### Phase 3 — Stations
 
 Part Forge, then Assembly Bench with tabs. First `MenuType`, screen and networking
 work in the project.
-
-### Phase 4 — Tool coverage
-
-Pickaxe, axe, shovel, hoe. Required for the replacement doctrine to hold.
 
 ### Phase 5 — Materials and traits
 
@@ -299,6 +309,19 @@ material the tool does not have and reads as a rendering fault, while an absent 
 empty slot, which is the truth and is useful feedback. And the alternative, a second model selected
 by a condition, would mean maintaining two copies of the layer list, which is exactly the duplication
 that lets a layer drift away from its slot.
+
+- **How is surface split between the four parts?** Open until there are more tool types. As it
+  stands the blade shows 24 interior pixels, the reinforcement 10, the binding 7 and the handle 3,
+  and a part with three pixels of colour cannot be told apart by its material, which is the whole
+  premise. The constraint is not arithmetic: a reallocation was measured that gave every part ten or
+  more and kept the silhouette in one piece, but it only got there by growing the pommel from five
+  rows to seven, and the sword stopped reading as the same weapon. Sixteen by sixteen does not hold
+  four parts, an outline around each and a constant grip without the proportions going wrong
+  somewhere. Two things worth keeping from the attempt: a part needs one contiguous block about
+  three pixels thick, because the outline eats anything thinner, and splitting a part into two small
+  zones makes it worse, not better — the handle dropped to a single interior pixel that way. Decide
+  it once pickaxe, axe, shovel and hoe exist, where each tool type has its own proportions and the
+  handle is not competing with a blade for the same diagonal.
 
 - What happens to existing vanilla tools in a world where Temper is installed —
   coexist silently, or is there a conversion path?
