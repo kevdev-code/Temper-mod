@@ -171,7 +171,11 @@ carries its crafting shape as three strings (`H` head, `G` handle, `B` binding, 
 reinforcement, `.` must be empty): vanilla's own head-over-stick layout with the fittings hung off the
 left. It reads the materials from the table rather than from the recipe, so a new material adds every
 combination with no new file, and a new tool is one more shape on the enum plus a one-line recipe file.
-`CraftingInput` arrives cropped to its filled cells, so the shape is checked against that box.
+`CraftingInput` arrives cropped to its filled cells, so the shape is checked against that box, in
+both orientations, as vanilla does for every asymmetric shaped recipe. The matching itself lives in
+`ShapeMatch`, which has no Minecraft types in it and carries its own runnable check:
+`java -cp common/build/classes/java/main io.github.kevdev_code.temper.recipe.ShapeMatch` after
+`:common:compileJava`. Crafting is the one path the visual check does not exercise.
 
 The axe item is vanilla's `AxeItem`, and the shovel and hoe will be `ShovelItem` and `HoeItem`: those
 classes own `useOn` (stripping logs, making paths, tilling), and a plain `Item` would lose it. Their
@@ -235,6 +239,16 @@ pure grey, so the head texture is the PNG's head as it stands; the stick is our 
 four greys, mapped onto the sword's hilt and grip ladders. Every comparison sheet the script renders
 carries a numbered grid: it is what let the pickaxe close in two rounds, because a correction can
 name a cell. Keep it for the axe, shovel and hoe.
+
+**The palette is authored, not copied.** "The material shows at 1:1" turned out to be a property
+of the material pair, not of the shape: the axe's blade passes with diamond and gold and fails with
+stone on iron, because neutral stone's grey lands inside iron's own ladder and reads as shading
+wherever it sits. So material colours live in `materials.json` as Temper's own, anchored on vanilla
+but held to a rule `tool-sprite.py` audits: every bright tone of one material stays
+`PALETTE_DISTANCE` (40 in RGB, measured) from every bright tone of every other. Iron stays pure white;
+when stone arrives it needs a cool cast strong enough to pass (`#6A8CB4` does, `#7590B0` sits at 36),
+and the audit already flags that a vanilla-like gold collides with wood at mid tones. A shape is judged
+on geometry alone: a contiguous band of five or more pixels at three quarters grey or brighter.
 
 **Layers never share a pixel.** An empty reinforcement is hidden by tinting its layer transparent,
 and in the GUI a layer hidden that way also hides whatever another layer drew beneath it: the knob was

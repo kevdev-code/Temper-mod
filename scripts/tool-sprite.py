@@ -138,6 +138,45 @@ def vanilla(tool):
     return head, stick, rgb
 
 
+# ---------------------------------------------------------------- the palette
+
+# How far, in RGB, any bright pixel of one material must sit from every pixel of another. Measured
+# on the axe's blade against an iron head: a stone at 42 reads, at 18 and 21 it does not. Neutral
+# stone, vanilla's own, sits at 7 and reads as shading of the iron head wherever it is placed.
+PALETTE_DISTANCE = 40
+
+
+def palette_problems(tool, colours=None):
+    """
+    Pairs of materials that a part cannot tell apart. "The material shows at 1:1" is a property of
+    the palette, not of a shape: the same blade passes with diamond and gold and fails with stone on
+    iron, because stone's grey lands inside iron's own ladder. So the palette is authored in
+    materials.json rather than copied off vanilla, and this is the rule it is held to: every bright
+    tone (grey half or more) of material B stays PALETTE_DISTANCE from every bright tone of material
+    A, over the greys the tool's tinted layers use. Bright against bright, because a part is told by
+    its lit pixels; holding a shade pixel of one material away from an outline pixel of another
+    failed colours the eye separates fine. Iron stays pure white, the anchor; anything else moves
+    before iron does.
+    """
+    import math
+    colours = colours or load_materials()
+    greys = sorted({g for name in ("head", "handle", "binding", "reinforcement") for g in layers(tool)[name].values()})
+
+    def tone(grey, colour):
+        return tuple(grey * (colour >> s & 255) / 255 for s in (16, 8, 0))
+
+    problems = []
+    for a, ca in colours.items():
+        for b, cb in colours.items():
+            if a == b:
+                continue
+            worst = min((math.dist(tone(gb, cb), tone(ga, ca)), gb, ga)
+                        for gb in greys if gb >= 0x80 for ga in greys if ga >= 0x80)
+            if worst[0] < PALETTE_DISTANCE:
+                problems.append(f"{b} at grey {worst[1]:#04x} is {worst[0]:.0f} from {a} at grey {worst[2]:#04x}, under {PALETTE_DISTANCE}")
+    return problems
+
+
 # ---------------------------------------------------------------- the sprite
 
 def layers(tool):
@@ -424,7 +463,7 @@ def main():
     args = parser.parse_args()
     drafts = os.path.join(ROOT, "build", "texture-drafts")
     os.makedirs(drafts, exist_ok=True)
-    problems = audit(args.tool)
+    problems = audit(args.tool) + palette_problems(args.tool)
     for p in problems:
         print("audit:", p)
     if args.export:

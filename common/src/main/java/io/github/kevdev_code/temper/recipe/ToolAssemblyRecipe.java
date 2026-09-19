@@ -32,6 +32,9 @@ import java.util.Optional;
  *     R G          R G .      R  reinforcement, optional; a dot must be empty
  * </pre>
  *
+ * Both orientations match, as they do for every asymmetric shaped recipe in vanilla; the mirroring
+ * lives in {@link ShapeMatch}, which has no Minecraft types in it and carries its own runnable check.
+ *
  * The materials come from the table rather than from the recipe, so a new material in
  * {@code materials.json} adds all of its combinations without a new recipe file, and a new tool is one
  * more shape on the enum plus a one-line recipe file naming it.
@@ -61,67 +64,49 @@ public class ToolAssemblyRecipe extends CustomRecipe {
     }
 
     /**
-     * The input arrives cropped to its filled cells. Both the four and five ingredient forms crop to
-     * the same box, because the binding holds the left column open either way.
+     * The input arrives cropped to its filled cells. Each cell is resolved to a material id first,
+     * then {@link ShapeMatch} fits the grid to the kind's shape or its mirror image, and only then is
+     * each material checked against the slot the shape gave it.
      */
     private Optional<ToolParts> resolve(final CraftingInput input) {
-        var shape = kind.shape();
-        if (input.height() != shape.size() || input.width() != shape.getFirst().length()) {
-            return Optional.empty();
-        }
-        Optional<Identifier> head = Optional.empty(), handle = Optional.empty(),
-                binding = Optional.empty(), reinforcement = Optional.empty();
-        for (int y = 0; y < shape.size(); y++) {
-            for (int x = 0; x < shape.get(y).length(); x++) {
-                char cell = shape.get(y).charAt(x);
+        String[][] grid = new String[input.height()][input.width()];
+        for (int y = 0; y < input.height(); y++) {
+            for (int x = 0; x < input.width(); x++) {
                 ItemStack stack = input.getItem(x, y);
-                if (cell == '.') {
-                    if (!stack.isEmpty()) {
-                        return Optional.empty();
-                    }
+                if (stack.isEmpty()) {
                     continue;
                 }
-                if (cell == 'R' && stack.isEmpty()) {
-                    continue;                                   // the one slot that may stay empty
+                Optional<Identifier> id = TemperMaterials.byIngredient(stack);
+                if (id.isEmpty()) {
+                    return Optional.empty();                   // something is there that is no material
                 }
-                PartSlot slot = switch (cell) {
-                    case 'H' -> PartSlot.HEAD;
-                    case 'G' -> PartSlot.HANDLE;
-                    case 'B' -> PartSlot.BINDING;
-                    case 'R' -> PartSlot.REINFORCEMENT;
-                    default -> throw new IllegalStateException("bad shape cell " + cell);
-                };
-                Optional<Identifier> found = material(stack, slot);
-                if (found.isEmpty()) {
-                    return Optional.empty();
-                }
-                switch (slot) {
-                    case HEAD -> {
-                        if (head.isPresent() && !head.get().equals(found.get())) {
-                            return Optional.empty();
-                        }
-                        head = found;
-                    }
-                    case HANDLE -> {
-                        if (handle.isPresent() && !handle.get().equals(found.get())) {
-                            return Optional.empty();
-                        }
-                        handle = found;
-                    }
-                    case BINDING -> binding = found;
-                    case REINFORCEMENT -> reinforcement = found;
-                }
+                grid[y][x] = id.get().toString();
             }
         }
+        ShapeMatch.Parts found = ShapeMatch.match(kind.shape(), grid);
+        if (found == null) {
+            return Optional.empty();
+        }
+        Optional<Identifier> head = allowed(found.head(), PartSlot.HEAD);
+        Optional<Identifier> handle = allowed(found.handle(), PartSlot.HANDLE);
+        Optional<Identifier> binding = allowed(found.binding(), PartSlot.BINDING);
         if (head.isEmpty() || handle.isEmpty() || binding.isEmpty()) {
             return Optional.empty();
+        }
+        Optional<Identifier> reinforcement = Optional.empty();
+        if (found.reinforcement() != null) {
+            reinforcement = allowed(found.reinforcement(), PartSlot.REINFORCEMENT);
+            if (reinforcement.isEmpty()) {
+                return Optional.empty();                       // something is there, but it may not reinforce
+            }
         }
         return Optional.of(new ToolParts(handle.get(), head.get(), binding.get(), reinforcement));
     }
 
-    private static Optional<Identifier> material(final ItemStack stack, final PartSlot slot) {
-        return TemperMaterials.byIngredient(stack)
-                .filter(id -> TemperMaterials.get(id).map(m -> m.allows(slot)).orElse(false));
+    /** The material, if it may occupy that slot. */
+    private static Optional<Identifier> allowed(final String id, final PartSlot slot) {
+        Identifier material = Identifier.parse(id);
+        return TemperMaterials.get(material).filter(m -> m.allows(slot)).map(m -> material);
     }
 
     @Override
