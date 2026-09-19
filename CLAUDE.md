@@ -81,6 +81,14 @@ execute as @a unless items entity @s hotbar.* temper:<item> run give @s temper:<
 For 26.1.2 a datapack `pack.mcmeta` needs `"min_format": [101, 1], "max_format": 101`; copy the current
 numbers from `data/minecraft/datapacks/*/pack.mcmeta` in the game jar when the version changes.
 
+**Checking the result.** `scripts/verify-swords.py` reads the screenshots left in `build/visual-check/`
+and checks every sword in them pixel by pixel against the sprite, exiting non-zero if any of the nine
+head and handle pairings is missing or mistinted. The comparison can be exact because the GUI draws
+icons unlit, so each pixel is its layer's grey times its material colour and nothing else. Do not
+verify by counting colours in a slot: the hotbar frame and the world behind it produce greys that pass
+for iron. The world in the shot is expendable; delete `<platform>/run/saves/<world>` and the next run
+regenerates it.
+
 **Load check without a screenshot.** For NeoForge set `NEOFORGE_CLIENT_SELFTEST=<path of a file that
 must not exist yet>` before `:neoforge:runClient`; the client stops itself after the loading overlay and
 creates the file. `NEOFORGE_DEDICATED_SERVER_SELFTEST` does the same for `:neoforge:runServer`, after one
