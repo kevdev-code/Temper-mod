@@ -173,9 +173,19 @@ Mechanism (native in 26.1, no hacks required):
 - The items model definition lists one tint source per index, in layer order.
 - A custom `ItemTintSource` implements `calculate(ItemStack, level, entity)`, reads
   the part material from the stack's data component, and returns that material's RGB.
-- Registered via `ItemTintSources.ID_MAPPER`.
+- Registration is the part that differs per loader. `ItemTintSources.ID_MAPPER` is private in
+  vanilla: Fabric API opens it with an access widener that applies only to the Fabric module, and
+  NeoForge exposes it through `RegisterColorHandlersEvent.ItemTintSources` on the mod bus. So
+  `common` owns _what_ gets registered and each platform entrypoint passes in _how_: the shared
+  init takes the registrar as an argument.
 
-Reference: `docs.fabricmc.net/26.1.2/develop/items/item-appearance`.
+Reference: `docs.fabricmc.net/26.1.2/develop/items/item-appearance`, which shows the
+`ID_MAPPER` call directly — correct on Fabric, uncompilable anywhere else.
+
+**Client APIs are where multiloader diverges most, and one loader's documentation will present
+as standard something that only works there.** Expect this again at the Assembly Bench in Phase 3
+(menus, screens, networking) and at the Smeltery in Phase 7 (fluids and custom rendering): assume
+the registration path differs and keep the decision in `common` behind an injected registrar.
 
 **The leverage this buys:**
 
