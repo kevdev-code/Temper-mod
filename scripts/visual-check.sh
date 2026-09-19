@@ -73,6 +73,9 @@ fi
 
 if [ -n "${TEMPER_DATAPACK:-}" ]; then
     mkdir -p "$SAVE/datapacks"
+    # One pack at a time. Two of them both giving nine items fight over nine hotbar slots, and
+    # the checker only ever sees the hotbar.
+    rm -rf "$SAVE"/datapacks/temper_*
     cp -r "$TEMPER_DATAPACK" "$SAVE/datapacks/"
     echo "==> datapack $(basename "$TEMPER_DATAPACK") copied into $SAVE"
 fi
