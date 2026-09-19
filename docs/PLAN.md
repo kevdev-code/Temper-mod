@@ -370,6 +370,15 @@ that lets a layer drift away from its slot.
   it once pickaxe, axe, shovel and hoe exist, where each tool type has its own proportions and the
   handle is not competing with a blade for the same diagonal.
 
+- **Does the stat model get a ceiling, and where does it live?** Decide in the balance phase, not
+  before, but it is already close. The handle's speed multiplier on top of a per-material baseline
+  puts an all-diamond hoe at 3.60 swings per second, 0.4 under the 4.0 that vanilla treats as its top
+  (netherite), and that is with three materials and no modifiers. Two ways to hold the "no more
+  powerful than vanilla" pillar once modded materials arrive: `materials.json` carries per-stat caps
+  that the assembly clamps to, or Temper accepts going past vanilla and the pillar is reworded as a
+  budget rather than a ceiling. Either is defensible; what is not is discovering the choice when a
+  modded material lands on 4.5.
+
 - What happens to existing vanilla tools in a world where Temper is installed —
   coexist silently, or is there a conversion path?
 - Do parts stack? A stack of identical iron sword heads is convenient but complicates
