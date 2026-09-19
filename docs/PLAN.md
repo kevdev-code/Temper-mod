@@ -207,6 +207,23 @@ binding and reinforcement land on layers 3 and 4 while their slots are 2 and 3. 
 assumes `layer == slot` fails silently, tinting a part with another part's material rather
 than raising anything.
 
+**What makes a part legible, in two halves.** "The material shows at 1:1" is the premise of the
+mod, and Phase 4 found it was being judged against the wrong things twice. First, it turned out to
+depend on the pair of materials rather than on the shape: the axe's blade passes with diamond and
+gold and fails with stone on iron, because vanilla's neutral stone lands inside iron's own ladder and
+reads as shading wherever it sits. So the palette is Temper's own, authored in `materials.json` and
+anchored on vanilla rather than copied from it, and held to a rule the sprite script audits: every
+bright tone of one material stays a measured minimum distance from every bright tone of every other.
+Iron stays pure white, the anchor; anything else moves before iron does.
+
+Second, a shape is judged on geometry alone, and in proportion, not by count. An absolute threshold
+(so many pixels at so much grey) was calibrated on the pickaxe and the axe and broke on the hoe,
+whose whole arm is two rows with a single highlight pixel: it asked for more light than the piece
+has. The rule is that the material band owns the piece's highlight: the binding holds pixels at the
+blade's brightest tone, and holds them more densely than the head does. The hoe's blade then carries
+three highlights where vanilla drew one, and passes on what actually matters, that the edge can be
+seen to be another material, without growing into a different tool.
+
 **Layers never share a pixel.** This is a constraint of the renderer, not a design preference,
 and it shapes the geometry of every sprite from Phase 4 on. An empty reinforcement is hidden by
 tinting its layer fully transparent (section 15), and in the GUI a layer hidden that way also hides
