@@ -81,6 +81,18 @@ TOOLS = {
         # reaches equally far along both flanks. Cut by columns it sat a pixel askew.
         "grip": [(5, 10), (4, 11), (5, 11), (6, 11), (3, 12), (4, 12), (5, 12), (4, 13)],
     },
+    "axe": {
+        "vanilla": "iron_axe.png",
+        # The blade: the bit's cutting edge moved one column out along its whole length, from the
+        # toe at row 1 to the heel at row 6. The added column is the new outline, dark on top and
+        # darker under the heel as vanilla's is, and vanilla's old outline just inside it becomes
+        # the lit bevel, so the sharpened edge is two pixels wide and shows its material.
+        "binding": {(8, 1): 0x44, (7, 2): 0x44, (6, 3): 0x44, (5, 4): 0x44, (5, 5): 0x18, (6, 6): 0x18,
+                    (8, 2): 0xFF, (7, 3): 0xFF, (6, 4): 0xFF, (6, 5): 0xFF, (7, 6): 0xFF},
+        # The stick is the pickaxe's stick, pixel for pixel, so the knob and the grip are the same.
+        "reinforcement": {(1, 14): 0xD9, (1, 15): 0x9B, (2, 15): 0x6B},
+        "grip": [(5, 10), (4, 11), (5, 11), (6, 11), (3, 12), (4, 12), (5, 12), (4, 13)],
+    },
 }
 
 

@@ -17,7 +17,8 @@ import java.util.List;
  *
  * <p>The two baselines are vanilla 26.1.2's own, read off {@code Items}: every {@code *_sword} is
  * {@code Properties.sword(material, 3.0f, -2.4f)} and every {@code *_pickaxe} is
- * {@code Properties.pickaxe(material, 1.0f, -2.8f)}. The head's {@code attackDamageBonus} is added to
+ * {@code Properties.pickaxe(material, 1.0f, -2.8f)}, every {@code *_axe} is
+ * {@code new AxeItem(material, 6.0f, -3.1f, p)}. The head's {@code attackDamageBonus} is added to
  * the first. A tool that mines names the block tag it mines efficiently; the sword names none.
  *
  * <p>The shape is the crafting grid, read after vanilla crops it to its filled cells: {@code H} head,
@@ -32,7 +33,11 @@ public enum ToolKind implements StringRepresentable {
     PICKAXE("pickaxe", 1.0F, -2.8F, BlockTags.MINEABLE_WITH_PICKAXE,
             "HHH",
             "BG.",
-            "RG.");
+            "RG."),
+    AXE("axe", 6.0F, -3.1F, BlockTags.MINEABLE_WITH_AXE,
+            ".HH",
+            "BHG",
+            "R.G");
 
     public static final Codec<ToolKind> CODEC = StringRepresentable.fromEnum(ToolKind::values);
 
@@ -60,6 +65,7 @@ public enum ToolKind implements StringRepresentable {
         return switch (this) {
             case SWORD -> Temper.SWORD.get();
             case PICKAXE -> Temper.PICKAXE.get();
+            case AXE -> Temper.AXE.get();
         };
     }
 

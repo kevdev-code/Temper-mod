@@ -1,0 +1,10 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "temper:item/axe_handle",
+    "layer1": "temper:item/axe_head",
+    "layer2": "temper:item/axe_grip",
+    "layer3": "temper:item/axe_binding",
+    "layer4": "temper:item/axe_reinforcement"
+  }
+}

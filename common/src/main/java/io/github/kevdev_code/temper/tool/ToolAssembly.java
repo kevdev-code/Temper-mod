@@ -103,6 +103,10 @@ public final class ToolAssembly {
         // enchantValue = binding.enchantability, as PLAN.md section 4 has it.
         stack.set(DataComponents.ENCHANTABLE, new Enchantable(binding.binding().enchantmentValue()));
 
+        // A tool built on a vanilla item class carries that class's repair ingredient as a default.
+        // Repair is PLAN.md section 8 and is not designed yet, so no Temper tool repairs in an anvil.
+        stack.remove(DataComponents.REPAIRABLE);
+
         stack.set(DataComponents.ITEM_NAME, Component.translatable("item.temper." + kind.getSerializedName() + ".assembled",
                 Component.translatable(materialKey(parts.head()))));
         stack.set(DataComponents.LORE, new ItemLore(lore(parts, binding)));

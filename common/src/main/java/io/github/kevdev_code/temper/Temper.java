@@ -10,9 +10,11 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ToolMaterial;
 import net.minecraft.world.item.component.Weapon;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import org.slf4j.Logger;
@@ -68,6 +70,17 @@ public final class Temper {
                     .setId(ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(MOD_ID, "pickaxe")))
                     .durability(1)
                     .component(DataComponents.WEAPON, new Weapon(2))));
+
+    /**
+     * The axe is vanilla's own {@code AxeItem}, because that class is where stripping logs lives, and
+     * so will the shovel and the hoe be for the same reason. Its constructor bakes iron's numbers into
+     * the item as defaults; every assembled stack overrides them, and the one it cannot, repairable
+     * with iron, the assembly removes.
+     */
+    public static final RegistrySupplier<Item> AXE = ITEMS.register("axe",
+            () -> new AxeItem(ToolMaterial.IRON, ToolKind.AXE.attackDamageBaseline(), ToolKind.AXE.attackSpeedBaseline(),
+                    new Item.Properties()
+                            .setId(ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(MOD_ID, "axe")))));
 
     /** One serializer for every tool; the recipe file names the {@link ToolKind}. */
     public static final RegistrySupplier<RecipeSerializer<ToolAssemblyRecipe>> TOOL_ASSEMBLY =

@@ -11,7 +11,7 @@ adding any gameplay feature. This file covers only how the repo works.
 Targets Minecraft **26.1.2**, Java **25**, Gradle 9.5.1, built with Architectury Loom for both
 **Fabric** and **NeoForge**. Base package is `io.github.kevdev_code.temper`.
 
-State: PLAN.md Phase 4 (tool coverage) in progress: sword and pickaxe are in, axe, shovel and hoe
+State: PLAN.md Phase 4 (tool coverage) in progress: sword, pickaxe and axe are in, shovel and hoe
 follow one at a time. Four part slots, three materials, assembled in the vanilla crafting table. The
 reinforcement is a slot only: it is stored, drawn and shown in the tooltip, but its behavioural trait
 waits for Phase 6 with the modifiers.
@@ -172,6 +172,12 @@ reinforcement, `.` must be empty): vanilla's own head-over-stick layout with the
 left. It reads the materials from the table rather than from the recipe, so a new material adds every
 combination with no new file, and a new tool is one more shape on the enum plus a one-line recipe file.
 `CraftingInput` arrives cropped to its filled cells, so the shape is checked against that box.
+
+The axe item is vanilla's `AxeItem`, and the shovel and hoe will be `ShovelItem` and `HoeItem`: those
+classes own `useOn` (stripping logs, making paths, tilling), and a plain `Item` would lose it. Their
+constructors bake a `ToolMaterial`'s numbers into the item as defaults; every assembled stack
+overrides them, and the one it cannot override, `repairable`, the assembly removes, so no Temper tool
+repairs in an anvil until PLAN.md section 8 is designed.
 
 The first time the creative tab is built it logs the whole calibration table, one line per combination.
 That log is the artefact PLAN.md's definition of done gets checked against: a sword with an iron head
