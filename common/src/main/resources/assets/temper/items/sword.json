@@ -4,7 +4,8 @@
     "model": "temper:item/sword",
     "tints": [
       { "type": "temper:layer", "layer": 0 },
-      { "type": "temper:layer", "layer": 1 }
+      { "type": "temper:layer", "layer": 1 },
+      { "type": "minecraft:constant", "value": 9133628 }
     ]
   }
 }

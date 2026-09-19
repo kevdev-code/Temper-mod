@@ -2,6 +2,7 @@
   "parent": "minecraft:item/handheld",
   "textures": {
     "layer0": "temper:item/sword_handle",
-    "layer1": "temper:item/sword_head"
+    "layer1": "temper:item/sword_head",
+    "layer2": "temper:item/sword_grip"
   }
 }

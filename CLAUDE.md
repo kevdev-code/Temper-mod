@@ -143,15 +143,26 @@ That log is the artefact PLAN.md's definition of done gets checked against: a sw
 and an iron handle must land exactly on the vanilla iron sword.
 
 Item appearance takes two files per item. `assets/temper/items/<item>.json` is the client item model
-definition and carries the tints:
+definition and carries the tints, one per model layer, in layer order:
 
 ```json
 { "model": { "type": "minecraft:model", "model": "temper:item/<item>",
-             "tints": [ { "type": "temper:layer", "layer": 0 } ] } }
+             "tints": [ { "type": "temper:layer", "layer": 0 },
+                        { "type": "temper:layer", "layer": 1 },
+                        { "type": "minecraft:constant", "value": 9133628 } ] } }
 ```
 
-`assets/temper/models/item/<item>.json` with parent `minecraft:item/generated` maps each `layerN`
-texture to tint index `N`. Textures are authored grayscale; all colour comes from the tint source.
+`assets/temper/models/item/<item>.json` with parent `minecraft:item/handheld` maps each `layerN`
+texture to tint index `N`. The `layer` field of `temper:layer` is the **part slot** (0 handle,
+1 head, per `PartSlot`), which happens to equal the model layer today and will not once more layers
+exist. Textures are authored grayscale; all colour comes from the tint.
+
+The sword's three textures are not hand-drawn. `scripts/sword-sprite.py` holds the approved sprite as
+zones (blade, guard, grip, pommel) on one diagonal axis, computes outlines and seams, and `--export`
+splits it by zone into `sword_head.png` (blade, tinted by the head material), `sword_handle.png`
+(guard and pommel, tinted by the handle material) and `sword_grip.png` (the grip, tinted by a fixed
+leather colour: a grip is never solid diamond). Edit the script and re-export; never edit the PNGs.
+Moving the guard to the binding layer in Phase 2 is one line of its `LAYER` map.
 
 ## Build quirks worth knowing
 
