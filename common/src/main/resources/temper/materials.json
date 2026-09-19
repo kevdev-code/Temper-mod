@@ -1,9 +1,9 @@
 {
-  "_comment": "Head numbers are vanilla 26.1.2 ToolMaterial constants, read from the game jar. Handle multipliers are Temper's own and straddle 1.0 so the handle is a trade, not an upgrade. Adding a material is a new entry here and nothing else.",
+  "_comment": "Head numbers are vanilla 26.1.2 ToolMaterial constants, read from the game jar. Handle multipliers are Temper's own and straddle 1.0 so the handle is a trade, not an upgrade. Adding a material is a new entry here and nothing else. Colours are calibrated against the vanilla item after tinting: the blade body (90% grey times the colour) lands on the item's main tone, except for materials that are dark to begin with, where the colour is raised until the zone means match; see scripts/sword-sprite.py --calibrate.",
 
   "materials": {
     "wood": {
-      "color": "#A0763F",
+      "color": "#9E772D",
       "ingredient": "#minecraft:wooden_tool_materials",
       "head": { "durability": 59, "attack_damage_bonus": 0.0, "enchantment_value": 15 },
       "handle": { "durability_multiplier": 0.85, "speed_multiplier": 1.15 },
@@ -11,7 +11,7 @@
     },
 
     "iron": {
-      "color": "#D8D8D8",
+      "color": "#FFFFFF",
       "ingredient": "#minecraft:iron_tool_materials",
       "head": { "durability": 250, "attack_damage_bonus": 2.0, "enchantment_value": 14 },
       "handle": { "durability_multiplier": 1.0, "speed_multiplier": 1.0 },
@@ -19,7 +19,7 @@
     },
 
     "diamond": {
-      "color": "#4AEDD9",
+      "color": "#39FFE2",
       "ingredient": "#minecraft:diamond_tool_materials",
       "head": { "durability": 1561, "attack_damage_bonus": 3.0, "enchantment_value": 10 },
       "handle": { "durability_multiplier": 1.15, "speed_multiplier": 0.9 },

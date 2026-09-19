@@ -152,6 +152,18 @@ definition and carries the tints, one per model layer, in layer order:
                         { "type": "minecraft:constant", "value": 9133628 } ] } }
 ```
 
+Tints multiply, so a material's colour is not the colour you see: it is the colour that makes the
+blade body (90% grey) land on the vanilla item's main tone after multiplying. Vanilla's iron blade
+body is pure white, so iron is `#FFFFFF`; copying a tone off a source texture comes out dull. A
+material that is dark to begin with, like wood, gets dragged under vanilla by the 55% shade floor,
+so its colour is raised until the per-zone means match instead of the body.
+`scripts/sword-sprite.py --calibrate` renders ours beside the vanilla swords extracted to
+`build/texture-drafts/ref/` to check a new material against the real thing.
+
+The grip's constant is one colour for every sword on purpose: it is what ties the set together.
+It sits darker and redder than oak because in Temper, unlike vanilla, a wood blade can sit on a
+wood handle, and that pairing has to keep reading as two pieces.
+
 `assets/temper/models/item/<item>.json` with parent `minecraft:item/handheld` maps each `layerN`
 texture to tint index `N`. The `layer` field of `temper:layer` is the **part slot** (0 handle,
 1 head, per `PartSlot`), which happens to equal the model layer today and will not once more layers

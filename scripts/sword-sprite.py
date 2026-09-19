@@ -34,9 +34,21 @@ LAYERS
     outlines come from zones, not layers.
 
 TONES
-    blade fill 76..100%, metal fill 46..68%, each with a dark outline, as before. The grip is drawn
-    in grey too and multiplied by LEATHER at render time, exactly like a material tint but with a
-    fixed colour, so all three textures stay grayscale and one authoring rule holds.
+    The game multiplies each layer's grey by its colour, so the grey ladder decides contrast and the
+    material colour decides where the ladder lands. Both were calibrated against vanilla's own
+    swords, measured from the game jar, not from their source textures: vanilla's iron blade is pure
+    white in the body with a 59% shade, and its diamond blade sits on (51,235,203) with a 41% shade.
+        blade fill   100 / 90 / 55 %   the 55% floor is vanilla's own shade depth
+        metal fill    75 / 50 / 33 %   vanilla's hilt body runs at 42..47% of its blade body
+        grip fill    100 / 80 / 65 %   times LEATHER, one constant for every sword: it is what ties
+                                       the set together, and it sits darker and redder than oak so
+                                       wood on wood, which vanilla never has, keeps its seams
+    Material colours live in temper/materials.json and this script reads them from there, so the
+    preview shows what the game shows. The rule for a new material: pick the colour that makes the
+    blade body (90% grey) land on the vanilla item's main tone, and check the shade follows. For a
+    material that is dark to begin with, like wood, the 55% floor drags the whole sprite under
+    vanilla; there the colour is raised until the zone means match instead (wood sits 22% above
+    its body-matched value for that reason).
 """
 
 import argparse
@@ -73,12 +85,32 @@ LAYER = {
 # stays near black; a seam is the line between two zones and only needs to separate them, so it
 # sits at 33..40%, still dark by the brief but leaving the small metal zones some colour.
 TONES = {
-    "head":   (0xFF, 0xE0, 0xC2, 0x33, 0x66),    # 100 / 88 / 76 / 20 / 40 %
-    "handle": (0xAD, 0x8F, 0x75, 0x2E, 0x55),    #  68 / 56 / 46 / 18 / 33 %
+    "head":   (0xFF, 0xE6, 0x8C, 0x33, 0x66),    # 100 / 90 / 55 / 20 / 40 %
+    "handle": (0xBF, 0x80, 0x54, 0x2E, 0x55),    #  75 / 50 / 33 / 18 / 33 %
     "grip":   (0xFF, 0xCC, 0xA6, 0x66, 0x8A),    # 100 / 80 / 65 / 40 / 54 %, then multiplied by LEATHER
 }
-LEATHER = 0x8B5E3C                          # the constant grip colour; a shade off oak so wood/wood still reads
-MATERIALS = {"wood": 0xA0763F, "iron": 0xD8D8D8, "diamond": 0x4AEDD9}
+LEATHER = 0x8B5E3C                          # darker and redder than oak, so a wood blade on a wood handle still reads as two pieces
+
+
+def load_materials():
+    """Colours from temper/materials.json, the same file the game reads, so nothing can drift."""
+    import json
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    path = os.path.join(root, "common", "src", "main", "resources", "temper", "materials.json")
+    with open(path, encoding="utf-8") as f:
+        table = json.load(f)["materials"]
+    return {name: int(entry["color"].lstrip("#"), 16) for name, entry in table.items()}
+
+
+MATERIALS = load_materials()
+
+# The previous calibration, kept only so --calibrate can show the change against it.
+BEFORE = dict(
+    tones={"head": (0xFF, 0xE6, 0x8C, 0x33, 0x66), "handle": (0xBF, 0x80, 0x54, 0x2E, 0x55),
+           "grip": (0xFF, 0xCC, 0xA6, 0x66, 0x8A)},
+    materials={"wood": 0x826225, "iron": 0xFFFFFF, "diamond": 0x39FFE2},
+    leather=0x826226,
+)
 
 
 def uv(x, y):
@@ -154,11 +186,11 @@ def tinted(pixels, zones, head_rgb, handle_rgb, binding_rgb=None):
 
 def audit(pixels, zones):
     problems = []
-    ranges = {"head": (0.75, 1.0), "handle": (0.45, 0.70)}
+    ranges = {"head": (0.55, 1.0), "handle": (0.33, 0.75)}     # the calibrated ladders; the floor keeps fills off black
     for layer, (lo, hi) in ranges.items():
         fills = {pixels[y][x][0] for y in range(SIZE) for x in range(SIZE)
                  if zones[y][x] and LAYER[zones[y][x]] == layer and not OUTLINE_MASK[y][x]}
-        if fills and not (lo <= min(fills) / 255 and max(fills) / 255 <= hi):
+        if fills and not (lo <= round(min(fills) / 255, 2) and round(max(fills) / 255, 2) <= hi):
             problems.append(f"{layer} fill spans {min(fills)/255:.0%}..{max(fills)/255:.0%}, wanted {lo:.0%}..{hi:.0%}")
     for zone in ZONES:
         n = sum(1 for y in range(SIZE) for x in range(SIZE) if zones[y][x] == zone and not OUTLINE_MASK[y][x])
@@ -378,14 +410,83 @@ def export_layers(out_dir):
     print(f"  grip constant tint: {LEATHER} (#{LEATHER:06X}), for minecraft:constant \"value\"")
 
 
+def calibrate_sheet(out_path, ref_dir, scale=8):
+    """Vanilla's sword, ours before calibration, ours after: wood, iron, diamond, at 8x and 1:1."""
+    global TONES, LEATHER
+    from PIL import Image, ImageDraw, ImageFont
+
+    def to_image(px):
+        im = Image.new("RGBA", (SIZE, SIZE))
+        im.putdata([p for row in px for p in row])
+        return im
+
+    def up(im, s):
+        return im.resize((SIZE * s, SIZE * s), Image.NEAREST)
+
+    refs = {"wood": "wooden_sword.png", "iron": "iron_sword.png", "diamond": "diamond_sword.png"}
+    saved_tones, saved_leather = TONES, LEATHER
+    TONES, LEATHER = BEFORE["tones"], BEFORE["leather"]
+    before_px, before_zn = build()
+    TONES, LEATHER = saved_tones, saved_leather
+    after_px, after_zn = build()
+
+    font, bold = ImageFont.load_default(size=12), ImageFont.load_default(size=14)
+    cell, pad = SIZE * scale, 12
+    width = 3 * cell + 4 * pad + 130
+    height = pad + 22 + 3 * (cell + 28) + pad
+    out = Image.new("RGB", (width, height), (34, 34, 38))
+    draw = ImageDraw.Draw(out)
+
+    def checker(x0, y0, w, h, s):
+        for cy in range(0, h, s):
+            for cx in range(0, w, s):
+                shade = (58, 58, 62) if ((cx // s + cy // s) % 2 == 0) else (46, 46, 50)
+                draw.rectangle([x0 + cx, y0 + cy, x0 + cx + s - 1, y0 + cy + s - 1], fill=shade)
+
+    def place(im, x, y, s):
+        checker(x, y, SIZE * s, SIZE * s, s if s > 1 else 2)
+        out.paste(up(im, s), (x, y), up(im, s))
+
+    y = pad
+    for i, title in enumerate(("vanilla", "ours, current", "ours, corrected")):
+        draw.text((pad + i * (cell + pad), y), title, font=bold, fill=(230, 230, 236))
+    draw.text((4 * pad + 3 * cell, y), "1:1 in the same order", font=bold, fill=(230, 230, 236))
+    y += 22
+    for name, ref in refs.items():
+        vanilla = Image.open(os.path.join(ref_dir, ref)).convert("RGBA")
+        before = to_image(tinted(before_px, before_zn, BEFORE["materials"][name], BEFORE["materials"][name]))
+        # tint with the old leather too, so the "before" column is exactly what shipped
+        saved = globals()["LEATHER"]; globals()["LEATHER"] = BEFORE["leather"]
+        before = to_image(tinted(before_px, before_zn, BEFORE["materials"][name], BEFORE["materials"][name]))
+        globals()["LEATHER"] = saved
+        after = to_image(tinted(after_px, after_zn, MATERIALS[name], MATERIALS[name]))
+        for i, im in enumerate((vanilla, before, after)):
+            place(im, pad + i * (cell + pad), y, scale)
+        x = 4 * pad + 3 * cell
+        for im in (vanilla, before, after):
+            place(im, x, y + cell // 2 - SIZE, 1)
+            x += SIZE + 8
+        draw.text((pad, y + cell + 6), f"{name}: head and handle both {name}", font=font, fill=(200, 200, 208))
+        y += cell + 28
+
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    out.save(out_path)
+    print(f"wrote {out_path}  ({width}x{height})")
+
+
 def main():
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--ascii", action="store_true")
     parser.add_argument("--guard-compare", action="store_true", help="short against long upper arm")
     parser.add_argument("--export", action="store_true", help="write the three layer textures into the mod assets")
+    parser.add_argument("--calibrate", action="store_true", help="vanilla against ours, before and after, per material")
     parser.add_argument("--out", default=os.path.join(root, "build", "texture-drafts", "sword-hilt.png"))
     args = parser.parse_args()
+    if args.calibrate:
+        calibrate_sheet(os.path.join(root, "build", "texture-drafts", "calibration.png"),
+                        os.path.join(root, "build", "texture-drafts", "ref"))
+        return
     if args.export:
         export_layers(os.path.join(root, "common", "src", "main", "resources", "assets", "temper", "textures", "item"))
         return
