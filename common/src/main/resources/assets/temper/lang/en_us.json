@@ -5,6 +5,8 @@
   "item.temper.pickaxe.assembled": "%s Pickaxe",
   "item.temper.axe": "Temper Axe",
   "item.temper.axe.assembled": "%s Axe",
+  "item.temper.shovel": "Temper Shovel",
+  "item.temper.shovel.assembled": "%s Shovel",
   "itemGroup.temper": "Temper",
   "material.temper.wood": "Wooden",
   "material.temper.iron": "Iron",

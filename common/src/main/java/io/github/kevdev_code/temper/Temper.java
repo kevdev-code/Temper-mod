@@ -14,6 +14,7 @@ import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ShovelItem;
 import net.minecraft.world.item.ToolMaterial;
 import net.minecraft.world.item.component.Weapon;
 import net.minecraft.world.item.crafting.RecipeSerializer;
@@ -72,8 +73,8 @@ public final class Temper {
                     .component(DataComponents.WEAPON, new Weapon(2))));
 
     /**
-     * The axe is vanilla's own {@code AxeItem}, because that class is where stripping logs lives, and
-     * so will the shovel and the hoe be for the same reason. Its constructor bakes iron's numbers into
+     * The axe is vanilla's own {@code AxeItem}, because that class is where stripping logs lives; the
+     * shovel is {@code ShovelItem} for its paths, and the hoe will be {@code HoeItem} for tilling. Its constructor bakes iron's numbers into
      * the item as defaults; every assembled stack overrides them, and the one it cannot, repairable
      * with iron, the assembly removes.
      */
@@ -81,6 +82,11 @@ public final class Temper {
             () -> new AxeItem(ToolMaterial.IRON, ToolKind.AXE.attackDamageBaseline(), ToolKind.AXE.attackSpeedBaseline(),
                     new Item.Properties()
                             .setId(ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(MOD_ID, "axe")))));
+
+    public static final RegistrySupplier<Item> SHOVEL = ITEMS.register("shovel",
+            () -> new ShovelItem(ToolMaterial.IRON, ToolKind.SHOVEL.attackDamageBaseline(), ToolKind.SHOVEL.attackSpeedBaseline(),
+                    new Item.Properties()
+                            .setId(ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(MOD_ID, "shovel")))));
 
     /** One serializer for every tool; the recipe file names the {@link ToolKind}. */
     public static final RegistrySupplier<RecipeSerializer<ToolAssemblyRecipe>> TOOL_ASSEMBLY =

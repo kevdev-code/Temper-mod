@@ -105,6 +105,21 @@ final class ShapeMatch {
         List<String> pickaxe = List.of("HHH", "BG.", "RG.");
         check("pickaxe as written", match(pickaxe, grid("iron iron iron", "diamond wood .", ". wood .")), want);
         check("pickaxe mirrored", match(pickaxe, grid("iron iron iron", ". wood diamond", ". wood .")), want);
+
+        // A material is one ingredient whatever slot it fills, so an all-iron grid is the case where
+        // two tools sharing a box could both match. The sword and the shovel must never both fit.
+        List<String> shovel = List.of("HB", "G.", "GR");
+        Parts allIron = new Parts("iron", "iron", "iron", "iron");
+        for (String[] rows : new String[][] {
+                {". iron", "iron iron", "iron iron"}, {"iron .", "iron iron", "iron iron"},   // a sword, both ways
+                {"iron iron", "iron .", "iron iron"}, {"iron iron", ". iron", "iron iron"}}) {  // a shovel, both ways
+            Parts asSword = match(sword, grid(rows)), asShovel = match(shovel, grid(rows));
+            if ((asSword != null) == (asShovel != null)) {
+                throw new AssertionError("sword and shovel both " + (asSword != null ? "match" : "miss") + " " + Arrays.toString(rows));
+            }
+        }
+        check("shovel as written", match(shovel, grid("iron iron", "iron .", "iron iron")), allIron);
+        check("shovel mirrored, no reinforcement", match(shovel, grid("iron iron", ". iron", ". iron")), new Parts("iron", "iron", "iron", null));
         System.out.println("ShapeMatch: every check passed");
     }
 

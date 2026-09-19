@@ -18,7 +18,8 @@ import java.util.List;
  * <p>The two baselines are vanilla 26.1.2's own, read off {@code Items}: every {@code *_sword} is
  * {@code Properties.sword(material, 3.0f, -2.4f)} and every {@code *_pickaxe} is
  * {@code Properties.pickaxe(material, 1.0f, -2.8f)}, every {@code *_axe} is
- * {@code new AxeItem(material, 6.0f, -3.1f, p)}. The head's {@code attackDamageBonus} is added to
+ * {@code new AxeItem(material, 6.0f, -3.1f, p)}, every {@code *_shovel} is
+ * {@code new ShovelItem(material, 1.5f, -3.0f, p)}. The head's {@code attackDamageBonus} is added to
  * the first. A tool that mines names the block tag it mines efficiently; the sword names none.
  *
  * <p>The shape is the crafting grid, read after vanilla crops it to its filled cells: {@code H} head,
@@ -37,7 +38,15 @@ public enum ToolKind implements StringRepresentable {
     AXE("axe", 6.0F, -3.1F, BlockTags.MINEABLE_WITH_AXE,
             ".HH",
             "BHG",
-            "R.G");
+            "R.G"),
+    // Not the sword's box with one head fewer. A material is one ingredient whatever slot it fills,
+    // so an all-iron column with iron fittings would fit both a sword and such a shovel, and
+    // mirroring makes it worse. This shape's empty cell never lands where the sword's does in either
+    // orientation; ShapeMatch's self check crosses the two.
+    SHOVEL("shovel", 1.5F, -3.0F, BlockTags.MINEABLE_WITH_SHOVEL,
+            "HB",
+            "G.",
+            "GR");
 
     public static final Codec<ToolKind> CODEC = StringRepresentable.fromEnum(ToolKind::values);
 
@@ -66,6 +75,7 @@ public enum ToolKind implements StringRepresentable {
             case SWORD -> Temper.SWORD.get();
             case PICKAXE -> Temper.PICKAXE.get();
             case AXE -> Temper.AXE.get();
+            case SHOVEL -> Temper.SHOVEL.get();
         };
     }
 

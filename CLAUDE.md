@@ -11,8 +11,8 @@ adding any gameplay feature. This file covers only how the repo works.
 Targets Minecraft **26.1.2**, Java **25**, Gradle 9.5.1, built with Architectury Loom for both
 **Fabric** and **NeoForge**. Base package is `io.github.kevdev_code.temper`.
 
-State: PLAN.md Phase 4 (tool coverage) in progress: sword, pickaxe and axe are in, shovel and hoe
-follow one at a time. Four part slots, three materials, assembled in the vanilla crafting table. The
+State: PLAN.md Phase 4 (tool coverage) in progress: sword, pickaxe, axe and shovel are in; the hoe
+follows. Four part slots, three materials, assembled in the vanilla crafting table. The
 reinforcement is a slot only: it is stored, drawn and shown in the tooltip, but its behavioural trait
 waits for Phase 6 with the modifiers.
 

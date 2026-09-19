@@ -93,6 +93,26 @@ TOOLS = {
         "reinforcement": {(1, 14): 0xD9, (1, 15): 0x9B, (2, 15): 0x6B},
         "grip": [(5, 10), (4, 11), (5, 11), (6, 11), (3, 12), (4, 12), (5, 12), (4, 13)],
     },
+    "shovel": {
+        "vanilla": "iron_shovel.png",
+        # The whole sprite sits one column left of where vanilla draws it. With the blade's rim moved
+        # out it reached the canvas edge at x15; shifted, it runs from x1 to x14 and sits centred.
+        # Every coordinate below is in this shifted frame, which is the one the sheets show.
+        "offset": (-1, 0),
+        # The blade: the spade's leading rim, its top and its right side, moved one pixel out. The
+        # added pixels are the new outline, lit along the top and dark down the right as vanilla's
+        # is; the old rim just inside becomes the bevel.
+        "binding": {(10, 1): 0x44, (11, 1): 0x44, (12, 1): 0x44, (13, 2): 0x44,
+                    (14, 3): 0x18, (14, 4): 0x18, (14, 5): 0x18,
+                    (10, 2): 0xFF, (11, 2): 0xFF, (12, 2): 0xFF, (13, 3): 0xFF, (13, 4): 0xFF, (13, 5): 0xFF},
+        # The knob is the haft's own butt: two of its last pixels, (1,13) and (2,14), rezoned as the
+        # reinforcement, plus (1,14) below them. So a shovel with no reinforcement ends its haft two
+        # pixels short, at (2,13) and (3,14), which is declared rather than caught below.
+        "reinforcement": {(1, 13): 0xD9, (1, 14): 0x9B, (2, 14): 0x6B},
+        "reinforcement_takes_haft": True,
+        # The same two diagonals as the pickaxe, x - y = -5 and -9, in this frame.
+        "grip": [(4, 10), (3, 11), (4, 11), (5, 11), (2, 12), (3, 12), (4, 12), (3, 13)],
+    },
 }
 
 
@@ -121,17 +141,21 @@ def vanilla(tool):
     from PIL import Image
     im = Image.open(io.BytesIO(vanilla_png(TOOLS[tool]["vanilla"]))).convert("RGBA")
     px = im.load()
+    dx, dy = TOOLS[tool].get("offset", (0, 0))
     head, stick, rgb = {}, {}, {}
     for y in range(SIZE):
         for x in range(SIZE):
             r, g, b, a = px[x, y]
             if not a:
                 continue
-            rgb[(x, y)] = (r, g, b)
+            p = (x + dx, y + dy)
+            if not (0 <= p[0] < SIZE and 0 <= p[1] < SIZE):
+                raise SystemExit(f"{tool}: offset {dx},{dy} pushes {(x, y)} off the canvas")
+            rgb[p] = (r, g, b)
             if r == g == b:
-                head[(x, y)] = r                          # the iron PNG's head is pure grey
+                head[p] = r                               # the iron PNG's head is pure grey
             else:
-                stick[(x, y)] = r << 16 | g << 8 | b
+                stick[p] = r << 16 | g << 8 | b
     unknown = {v for v in stick.values() if v not in STICK_TO_HANDLE}
     if unknown:
         raise SystemExit(f"{tool}: stick tones not in the table: " + ", ".join(f"#{v:06X}" for v in unknown))
@@ -185,12 +209,13 @@ def layers(tool):
     head, stick, _ = vanilla(tool)
     binding = dict(spec["binding"])
     grip = set(spec["grip"])
+    knob = dict(spec["reinforcement"])
     return {
-        "handle": {p: STICK_TO_HANDLE[v] for p, v in stick.items() if p not in grip},
+        "handle": {p: STICK_TO_HANDLE[v] for p, v in stick.items() if p not in grip and p not in knob},
         "head": {p: g for p, g in head.items() if p not in binding},
         "grip": {p: STICK_TO_GRIP[stick[p]] for p in grip},
         "binding": binding,
-        "reinforcement": dict(spec["reinforcement"]),
+        "reinforcement": knob,
     }
 
 
@@ -222,8 +247,11 @@ def audit(tool):
             if a < b and set(L[a]) & set(L[b]):
                 problems.append(f"{a} and {b} share pixels: {sorted(set(L[a]) & set(L[b]))}")
     bare = set(L["handle"]) | set(L["grip"]) | set(L["head"]) | set(L["binding"])
-    if not base <= bare:
-        problems.append("without a reinforcement the sprite loses vanilla pixels: " + str(sorted(base - bare)))
+    lost = sorted(base - bare)
+    if lost and not spec.get("reinforcement_takes_haft"):
+        problems.append("without a reinforcement the sprite loses vanilla pixels: " + str(lost))
+    if lost and not (set(lost) <= set(stick) and set(lost) <= set(spec["reinforcement"])):
+        problems.append("the reinforcement may only take haft pixels, not " + str(sorted(set(lost) - set(stick))))
     if max(L["handle"].values()) > 0.75 * max(L["head"].values()) + 0.5:
         problems.append("haft core is not under three quarters of the head's; the two read as one piece")
     # Nothing floats: the whole sprite is one eight-connected blob.
@@ -331,7 +359,7 @@ def grid_sheet(tool, path):
     """Vanilla beside ours, grey only, on the numbered grid, plus the case with no reinforcement."""
     colour, grey = _vanilla_images(tool)
     panels = [("vanilla, color", colour), ("vanilla, gris", grey),
-              ("Temper, gris (agarre en cuero)", composite(tool)),
+              ("Temper, gris (agarre en cuero)" + (f", desplazada {TOOLS[tool]['offset'][0]:+d} col" if TOOLS[tool].get("offset") else ""), composite(tool)),
               ("Temper, sin refuerzo", composite(tool, reinforcement=False)),
               ("zonas: azul binding, rojo refuerzo, ocre agarre", _zone_image(tool))]
     S, pad, top = 14, 30, 30
