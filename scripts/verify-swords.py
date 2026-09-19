@@ -4,7 +4,7 @@ Checks Temper swords in a visual-check screenshot, pixel by pixel, against the s
 scripts/sword-sprite.py draws.
 
     python scripts/verify-swords.py                     # both screenshots under build/visual-check/
-    python scripts/verify-swords.py shot.png [more...]  # specific ones
+    python scripts/verify-swords.py shot.png [more...]  # those, unioned as one set
     python scripts/verify-swords.py --give <dir>        # write the datapack that hands them out
 
 Why it can be exact rather than approximate: the GUI draws item icons unlit, and each tint layer is
@@ -29,6 +29,7 @@ WHAT IS CHECKED, AND WHY THIS SUBSET
     temper/materials.json, so this cannot drift from what the game renders.
 """
 
+import glob
 import importlib.util
 import json
 import os
@@ -85,31 +86,27 @@ def near(a, b):
     return all(abs(p - q) <= TOL for p, q in zip(a, b))
 
 
-def clusters(points, gap=6):
-    """Groups nearby points. Each group is one sword's lit diagonal."""
-    groups = []
-    for p in sorted(points):
-        for g in groups:
-            if any(abs(p[0] - q[0]) <= gap and abs(p[1] - q[1]) <= gap for q in g[-12:]):
-                g.append(p)
-                break
-        else:
-            groups.append([p])
-    return [g for g in groups if len(g) >= len(BLADE_LIT)]
-
-
 def placements(image, head):
-    """Where a sword with this head material might sit: origin and scale, from the blade alone."""
+    """
+    Every position where a sword with this head material could sit, as origin and scale.
+
+    Each pixel carrying the blade's lit tone is treated as a candidate tip and turned into an
+    origin. Grouping nearby pixels into one sword was faster but failed on iron, whose lit tone is
+    pure white: with the creative screen open the GUI supplies plenty of white of its own and the
+    groups ran together, so iron-headed swords went unfound. Callers validate every origin against
+    every zone anyway, and a wrong one fails on its first pixel, so the extra candidates are cheap.
+    """
     width, height = image.size
     px = image.load()
     want = mul(sp.TONES["head"][0], MATERIALS[head])
-    hits = [(x, y) for y in range(height) for x in range(width) if near(px[x, y], want)]
-    found = []
-    for group in clusters(hits):
-        scale = max(1, round((len(group) / len(BLADE_LIT)) ** 0.5))
-        top, right = min(y for _, y in group), max(x for x, _ in group)
-        found.append((right - (TIP[0] * scale + scale - 1), top - TIP[1] * scale, scale))
-    return found
+    origins = set()
+    for y in range(height):
+        for x in range(width):
+            if not near(px[x, y], want):
+                continue
+            for scale in (1, 2, 3, 4):
+                origins.add((x - (TIP[0] * scale + scale - 1), y - TIP[1] * scale, scale))
+    return sorted(origins)
 
 
 def zone_matches(image, origin, zone, colour):
@@ -148,17 +145,29 @@ def label(handle, head, binding, reinforcement):
     return f"{head}/{handle}/{binding}/{reinforcement or '-'}"
 
 
-def check(path):
-    image = Image.open(path).convert("RGB")
-    print(f"\n{os.path.relpath(path, ROOT)}")
-    print(f"  {'head/handle/binding/reinf':<34}{'found':>6}   where")
+def check(paths):
+    """
+    Treats the images as one set: a sword only has to be readable in one of them. The creative
+    screen opens by itself now and again and its tooltip covers a slot, which says nothing about
+    the sprite, so visual-check.sh takes three shots a few seconds apart and this unions them.
+    """
+    found = {combo: [] for combo in EXPECTED}
+    for path in paths:
+        image = Image.open(path).convert("RGB")
+        short = os.path.basename(path)
+        for combo in EXPECTED:
+            handle, head, binding, reinforcement = combo
+            for origin in placements(image, head):
+                if sword_at(image, origin, handle, head, binding, reinforcement):
+                    found[combo].append((short, origin))
+    print(f"\n{len(paths)} shot(s): " + ", ".join(os.path.basename(q) for q in paths))
+    print(f"  {'head/handle/binding/reinf':<34}{'seen in':>8}   where")
     ok = True
-    for handle, head, binding, reinforcement in EXPECTED:
-        hits = [o for o in placements(image, head)
-                if sword_at(image, o, handle, head, binding, reinforcement)]
+    for combo in EXPECTED:
+        hits = found[combo]
         ok &= bool(hits)
-        where = ", ".join(f"({x},{y})x{s}" for x, y, s in hits[:2]) or "NOT FOUND"
-        print(f"  {label(handle, head, binding, reinforcement):<34}{len(hits):>6}   {where}")
+        where = ", ".join(f"{n} ({x},{y})x{k}" for n, (x, y, k) in hits[:2]) or "NOT FOUND"
+        print(f"  {label(*combo):<34}{len(hits):>8}   {where}")
     print("  all nine present and exact in every zone" if ok else "  MISSING OR MISTINTED")
     return ok
 
@@ -200,14 +209,23 @@ def main():
     if args and args[0] == "--give":
         write_datapack(args[1])
         return
-    paths = args
-    if not paths:
-        shots = os.path.join(ROOT, "build", "visual-check")
-        paths = [os.path.join(shots, f"{p}-test.png") for p in ("fabric", "neoforge")]
-        paths = [p for p in paths if os.path.exists(p)]
+    if args:
+        sys.exit(0 if check(args) else 1)
+    shots = os.path.join(ROOT, "build", "visual-check")
+    ok, ran = True, False
+    for platform in ("fabric", "neoforge"):
+        paths = sorted(glob.glob(os.path.join(shots, f"{platform}-test-*.png")))
         if not paths:
-            sys.exit("no screenshots in build/visual-check/; run scripts/visual-check.sh first")
-    sys.exit(0 if all([check(p) for p in paths]) else 1)
+            single = os.path.join(shots, f"{platform}-test.png")
+            paths = [single] if os.path.exists(single) else []
+        if not paths:
+            continue
+        ran = True
+        print(f"\n== {platform}")
+        ok &= check(paths)
+    if not ran:
+        sys.exit("no screenshots in build/visual-check/; run scripts/visual-check.sh first")
+    sys.exit(0 if ok else 1)
 
 
 if __name__ == "__main__":

@@ -98,13 +98,32 @@ CLIENT_PID=$(powershell -NoProfile -Command "
         Where-Object { \$_.CommandLine -like '*architectury.main.class*' -and \$_.CommandLine -like '*${WIN_ROOT}\\${PLATFORM}*' } |
         Select-Object -First 1 -ExpandProperty ProcessId" | tr -d '[:space:]')
 echo "==> client pid ${CLIENT_PID:-unknown}"
-powershell -NoProfile -ExecutionPolicy Bypass -File "$ROOT/scripts/screenshot-window.ps1" \
-    -Out "$(cygpath -w "$ROOT/$SHOT")" -ProcessId "${CLIENT_PID:-0}" -TitleLike 'Minecraft*'
+# Capture the client this script launched, by id. Matching on the window title alone can pick a
+# different Minecraft window, such as one an earlier run left at the menu, and screenshot that.
+CLIENT_PID=$(powershell -NoProfile -Command "
+    Get-CimInstance Win32_Process -Filter \"Name='java.exe'\" |
+        Where-Object { \$_.CommandLine -like '*architectury.main.class*' -and \$_.CommandLine -like '*${WIN_ROOT}\\${PLATFORM}*' } |
+        Select-Object -First 1 -ExpandProperty ProcessId" | tr -d '[:space:]')
+echo "==> client pid ${CLIENT_PID:-unknown}"
 
+# Three shots a few seconds apart. The creative screen opens by itself now and then and its
+# tooltip hides a slot or two, which says nothing about the sprite; verify-swords.py unions the
+# shots, so one clean view of each sword is enough. Steadier than fighting the screen.
+SHOTS=""
+for n in 1 2 3; do
+    shot="${SHOT%.png}-$n.png"
+    rm -f "$shot"
+    powershell -NoProfile -ExecutionPolicy Bypass -File "$ROOT/scripts/screenshot-window.ps1" \
+        -Out "$(cygpath -w "$ROOT/$shot")" -ProcessId "${CLIENT_PID:-0}" -TitleLike 'Minecraft*' || true
+    [ -f "$shot" ] && SHOTS="$SHOTS $shot"
+    [ "$n" = 3 ] || sleep 4
+done
+first=$(echo $SHOTS | awk '{print $1}')
+[ -n "$first" ] && cp "$first" "$SHOT"
 echo "==> log evidence"
 grep -nE "Temper (common|client) init|- temper |Temper 1\.[0-9.]+ \(temper\)|joined the game|FAILURE:|Exception in|Crash Report|/ERROR" "$LOG" |
     grep -viE "Realms|SignedJWT|CancellationException" | cut -c1-200 | head -20
 
 kill_client
 wait $GRADLE_PID 2>/dev/null
-echo "==> screenshot: $SHOT"
+echo "==> screenshots:${SHOTS:- none}"

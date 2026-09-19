@@ -92,6 +92,12 @@ verify by counting colours in a slot: the hotbar frame and the world behind it p
 for iron. The world in the shot is expendable; delete `<platform>/run/saves/<world>` and the next run
 regenerates it.
 
+A run takes three shots a few seconds apart and the checker unions them: a sword only has to be
+readable in one. The creative screen opens by itself now and again and its tooltip hides a slot,
+which says nothing about the sprite. The checker also finds a sword by treating every pixel of the
+blade's lit tone as a candidate tip rather than by grouping nearby pixels, because iron's lit tone is
+pure white and the GUI supplies plenty of white of its own.
+
 Two things the capture gets wrong if you let it. It reads pixels off the screen, not out of the
 window, so the window has to be raised and pinned topmost first or whatever overlaps it lands in the
 PNG, which looks convincingly like the game being on its title screen. And it must target the client
