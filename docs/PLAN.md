@@ -75,6 +75,15 @@ enchantability but an extra slot, which changes how the whole tool is built.
 The reinforcement is optional. A tool assembled without one is valid — it simply has
 no trait.
 
+**The handle colours the metal, not the whole hilt.** A hilt reads as three pieces: guard,
+grip and pommel. The handle material tints the guard and the pommel; the grip, the band the
+hand actually closes on, is a fixed colour that no material touches. Gripping solid iron or
+diamond does not read as a tool, and vanilla answers the same problem the same way, with a
+wooden handle that never changes whatever the head is made of. The grip being one constant
+across every tool is a feature, not a limitation: it is what gives the set a common signature,
+and it is what keeps a wood head on a wood handle — a pairing vanilla never has to draw —
+from merging into a single brown mass.
+
 ## 5. Stat model
 
 **Head contributes absolute values. Handle contributes multipliers.**
@@ -159,9 +168,9 @@ material stored on the item.
 
 Mechanism (native in 26.1, no hacks required):
 
-- The tool's item model has one layer per part: `layer0` handle, `layer1` head,
-  `layer2` binding, `layer3` reinforcement — each carrying its own `tintindex`.
-- The items model definition lists one tint source per index.
+- The tool's item model has one layer per drawn piece, each carrying its own `tintindex`:
+  the part slots, plus the fixed grip from section 4.
+- The items model definition lists one tint source per index, in layer order.
 - A custom `ItemTintSource` implements `calculate(ItemStack, level, entity)`, reads
   the part material from the stack's data component, and returns that material's RGB.
 - Registered via `ItemTintSources.ID_MAPPER`.
@@ -177,7 +186,16 @@ Reference: `docs.fabricmc.net/26.1.2/develop/items/item-appearance`.
 | 4 (× 5 tool types) | 10        | 20                | 50,000             |
 
 Twenty grayscale textures produce a five-figure combination space. This ratio is the
-entire argument for the mod's architecture.
+entire argument for the mod's architecture. The grip costs one more texture per tool type
+and contributes no variants at all, which is exactly what being constant means.
+
+**A model layer index is not a part slot index.** The tint source is told which _part slot_
+to read; the model decides which _layer_ that tint paints. In Phase 1 the two line up by
+coincidence: handle is slot 0 and layer 0, head is slot 1 and layer 1. The coincidence is
+already partial — layer 2 is the grip, which is no slot at all — and Phase 2 ends it, because
+binding and reinforcement land on layers 3 and 4 while their slots are 2 and 3. Any code that
+assumes `layer == slot` fails silently, tinting a part with another part's material rather
+than raising anything.
 
 ## 11. Data model
 
