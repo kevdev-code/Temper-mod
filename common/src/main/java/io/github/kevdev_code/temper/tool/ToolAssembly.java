@@ -53,6 +53,9 @@ public final class ToolAssembly {
                 return Optional.empty();
             }
         }
+        if (material(parts, PartSlot.HEAD).head().attack(kind).isEmpty()) {
+            return Optional.empty();                        // vanilla makes no such tool of that material
+        }
         return Optional.of(build(kind, parts));
     }
 
@@ -72,13 +75,15 @@ public final class ToolAssembly {
         int durability = Math.max(1, Math.round(head.head().durability() * handle.handle().durabilityMultiplier()));
         stack.set(DataComponents.MAX_DAMAGE, durability);
 
-        // attackDamage = head.attackDamage. The handle owns nimbleness, never raw damage.
-        double attackDamage = kind.attackDamageBaseline() + head.head().attackDamageBonus();
+        // attackDamage = head.attackDamage: vanilla's baseline for this kind of tool in this material,
+        // plus the material's bonus. The handle owns nimbleness, never raw damage.
+        TemperMaterial.Attack attack = head.head().attack(kind).orElseThrow();
+        double attackDamage = attack.damageBaseline() + head.head().attackDamageBonus();
 
         // attackSpeed = head.baseSpeed * handle.speedMultiplier, worked in swings per second so that a
         // multiplier above 1.0 means faster. Vanilla stores it as a modifier against the player's 4.0,
         // so it converts back on the way out.
-        double swingsPerSecond = (PLAYER_BASE_ATTACK_SPEED + kind.attackSpeedBaseline()) * handle.handle().speedMultiplier();
+        double swingsPerSecond = (PLAYER_BASE_ATTACK_SPEED + attack.speedBaseline()) * handle.handle().speedMultiplier();
         double attackSpeedModifier = swingsPerSecond - PLAYER_BASE_ATTACK_SPEED;
 
         stack.set(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.builder()

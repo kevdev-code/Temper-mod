@@ -12,6 +12,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ShovelItem;
@@ -74,19 +75,25 @@ public final class Temper {
 
     /**
      * The axe is vanilla's own {@code AxeItem}, because that class is where stripping logs lives; the
-     * shovel is {@code ShovelItem} for its paths, and the hoe will be {@code HoeItem} for tilling. Its constructor bakes iron's numbers into
-     * the item as defaults; every assembled stack overrides them, and the one it cannot, repairable
-     * with iron, the assembly removes.
+     * shovel is {@code ShovelItem} for its paths, and the hoe is {@code HoeItem} for tilling. Each
+     * constructor bakes iron's numbers, vanilla's own for the iron tool, into the item as defaults;
+     * every assembled stack overrides them, and the one it cannot, repairable with iron, the assembly
+     * removes.
      */
     public static final RegistrySupplier<Item> AXE = ITEMS.register("axe",
-            () -> new AxeItem(ToolMaterial.IRON, ToolKind.AXE.attackDamageBaseline(), ToolKind.AXE.attackSpeedBaseline(),
+            () -> new AxeItem(ToolMaterial.IRON, 6.0F, -3.1F,
                     new Item.Properties()
                             .setId(ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(MOD_ID, "axe")))));
 
     public static final RegistrySupplier<Item> SHOVEL = ITEMS.register("shovel",
-            () -> new ShovelItem(ToolMaterial.IRON, ToolKind.SHOVEL.attackDamageBaseline(), ToolKind.SHOVEL.attackSpeedBaseline(),
+            () -> new ShovelItem(ToolMaterial.IRON, 1.5F, -3.0F,
                     new Item.Properties()
                             .setId(ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(MOD_ID, "shovel")))));
+
+    public static final RegistrySupplier<Item> HOE = ITEMS.register("hoe",
+            () -> new HoeItem(ToolMaterial.IRON, -2.0F, -1.0F,
+                    new Item.Properties()
+                            .setId(ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(MOD_ID, "hoe")))));
 
     /** One serializer for every tool; the recipe file names the {@link ToolKind}. */
     public static final RegistrySupplier<RecipeSerializer<ToolAssemblyRecipe>> TOOL_ASSEMBLY =

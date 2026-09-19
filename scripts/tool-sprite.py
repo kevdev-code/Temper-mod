@@ -62,8 +62,10 @@ LEATHER = 0x8B5E3C                  # the sword's constant, so the set reads as 
 
 # Vanilla's stick, as it appears in every tool PNG, and the grey each of its four tones becomes in
 # the handle and grip textures. The stick is wood (#9E772D) times 25 / 46 / 66 / 87 per cent.
-STICK_TO_HANDLE = {0x281E0B: 0x2E, 0x493615: 0x54, 0x684E1E: 0x80, 0x896727: 0xBF}
-STICK_TO_GRIP = {0x281E0B: 0x66, 0x493615: 0xA6, 0x684E1E: 0xCC, 0x896727: 0xFF}
+# The hoe's stick has its far flank in neutral 0x181818 instead of the brown, and those pixels are
+# listed by hand as stick in its entry, since by colour alone they pass for head.
+STICK_TO_HANDLE = {0x281E0B: 0x2E, 0x493615: 0x54, 0x684E1E: 0x80, 0x896727: 0xBF, 0x181818: 0x2E}
+STICK_TO_GRIP = {0x281E0B: 0x66, 0x493615: 0xA6, 0x684E1E: 0xCC, 0x896727: 0xFF, 0x181818: 0x66}
 
 TOOLS = {
     "pickaxe": {
@@ -113,6 +115,21 @@ TOOLS = {
         # The same two diagonals as the pickaxe, x - y = -5 and -9, in this frame.
         "grip": [(4, 10), (3, 11), (4, 11), (5, 11), (2, 12), (3, 12), (4, 12), (3, 13)],
     },
+    "hoe": {
+        "vanilla": "iron_hoe.png",
+        # Vanilla draws this stick's far flank and its butt in neutral 0x181818, which by colour alone
+        # would pass for head. Listed by hand: the flank from (11,6) down to (4,13), and the two butt
+        # pixels (2,14) and (3,14). The stick is then the pickaxe's, pixel for pixel.
+        "stick_neutral": [(11, 6), (10, 7), (9, 8), (8, 9), (7, 10), (6, 11), (5, 12), (4, 13), (2, 14), (3, 14)],
+        # The blade: the flat end of the arm, two columns further left. (4,2) is the new tip, (5,1),
+        # (6,1) and (5,3), (6,3) continue the arm's top and bottom outlines, and the old tip (6,2)
+        # and (5,2) become bevel beside vanilla's own highlight at (7,2): three highlights where
+        # vanilla drew one, on an arm that is two rows tall.
+        "binding": {(4, 2): 0x44, (5, 1): 0x44, (6, 1): 0x44, (5, 3): 0x18, (6, 3): 0x18,
+                    (5, 2): 0xFF, (6, 2): 0xFF, (7, 2): 0xFF, (7, 1): 0x44, (7, 3): 0x18},
+        "reinforcement": {(1, 14): 0xD9, (1, 15): 0x9B, (2, 15): 0x6B},
+        "grip": [(5, 10), (4, 11), (5, 11), (6, 11), (3, 12), (4, 12), (5, 12), (4, 13)],
+    },
 }
 
 
@@ -152,7 +169,7 @@ def vanilla(tool):
             if not (0 <= p[0] < SIZE and 0 <= p[1] < SIZE):
                 raise SystemExit(f"{tool}: offset {dx},{dy} pushes {(x, y)} off the canvas")
             rgb[p] = (r, g, b)
-            if r == g == b:
+            if r == g == b and p not in TOOLS[tool].get("stick_neutral", ()):
                 head[p] = r                               # the iron PNG's head is pure grey
             else:
                 stick[p] = r << 16 | g << 8 | b
@@ -252,8 +269,18 @@ def audit(tool):
         problems.append("without a reinforcement the sprite loses vanilla pixels: " + str(lost))
     if lost and not (set(lost) <= set(stick) and set(lost) <= set(spec["reinforcement"])):
         problems.append("the reinforcement may only take haft pixels, not " + str(sorted(set(lost) - set(stick))))
-    if max(L["handle"].values()) > 0.75 * max(L["head"].values()) + 0.5:
-        problems.append("haft core is not under three quarters of the head's; the two read as one piece")
+    # The haft sits under the blade, and the blade is head plus binding: the hoe's one full-white
+    # pixel is its tip, which the blade takes over.
+    if max(L["handle"].values()) > 0.75 * max(list(L["head"].values()) + list(L["binding"].values())) + 0.5:
+        problems.append("haft core is not under three quarters of the blade's; the two read as one piece")
+    # The binding owns the blade's highlight: it holds pixels at the blade's brightest tone, and holds
+    # them more densely than the head does. In proportion, not by count: a fixed count asked the hoe,
+    # whose whole arm is two rows with one highlight pixel, for more light than the piece has.
+    top = max(list(L["head"].values()) + list(L["binding"].values()))
+    head_density = sum(1 for g in L["head"].values() if g == top) / len(L["head"])
+    binding_density = sum(1 for g in L["binding"].values() if g == top) / len(L["binding"])
+    if binding_density == 0 or binding_density < head_density:
+        problems.append(f"the binding does not own the highlight: {binding_density:.0%} of it at {top:#04x} against {head_density:.0%} of the head")
     # Nothing floats: the whole sprite is one eight-connected blob.
     filled = set().union(*(set(px) for px in L.values()))
     seen, todo = set(), [min(filled)]

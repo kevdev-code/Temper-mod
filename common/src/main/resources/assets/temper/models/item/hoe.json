@@ -1,0 +1,10 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "temper:item/hoe_handle",
+    "layer1": "temper:item/hoe_head",
+    "layer2": "temper:item/hoe_grip",
+    "layer3": "temper:item/hoe_binding",
+    "layer4": "temper:item/hoe_reinforcement"
+  }
+}

@@ -11,8 +11,11 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 
 import io.github.kevdev_code.temper.tool.PartSlot;
+import io.github.kevdev_code.temper.tool.ToolKind;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * One row of the material table. Everything here comes from {@code temper/materials.json}; adding a
@@ -32,18 +35,38 @@ public record TemperMaterial(int color, String ingredient, Head head, Handle han
      * mining speed and the drops tag are what vanilla's {@code ToolMaterial} carries as {@code speed}
      * and {@code incorrectBlocksForDrops}; a tool that does not mine ignores them.
      */
-    public record Head(int durability, float attackDamageBonus, float miningSpeed, String incorrectForDrops) {
+    public record Head(int durability, float attackDamageBonus, float miningSpeed, String incorrectForDrops,
+                       Map<ToolKind, Attack> attack) {
         public static final Codec<Head> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.INT.fieldOf("durability").forGetter(Head::durability),
                 Codec.FLOAT.fieldOf("attack_damage_bonus").forGetter(Head::attackDamageBonus),
                 Codec.FLOAT.fieldOf("mining_speed").forGetter(Head::miningSpeed),
-                Codec.STRING.fieldOf("incorrect_for_drops").forGetter(Head::incorrectForDrops)
+                Codec.STRING.fieldOf("incorrect_for_drops").forGetter(Head::incorrectForDrops),
+                Codec.unboundedMap(ToolKind.CODEC, Attack.CODEC).fieldOf("attack").forGetter(Head::attack)
         ).apply(i, Head::new));
+
+        /** Empty when vanilla makes no such tool of this material, which then cannot head one either. */
+        public Optional<Attack> attack(final ToolKind kind) {
+            return Optional.ofNullable(attack.get(kind));
+        }
 
         /** The blocks this head mines without dropping anything, vanilla's mining level in tag form. */
         public TagKey<Block> incorrectForDropsTag() {
             return TagKey.create(Registries.BLOCK, Identifier.parse(incorrectForDrops));
         }
+    }
+
+    /**
+     * What vanilla's {@code Items} gives a tool of this material and kind, as
+     * {@code [attackDamageBaseline, attackSpeedBaseline]}: the head's bonus is added to the first, the
+     * second is a modifier against the player's 4.0. Constant across materials for the sword, pickaxe
+     * and shovel; hand tuned per material for the axe and the hoe, which is why they are data here and
+     * not constants on the kind.
+     */
+    public record Attack(float damageBaseline, float speedBaseline) {
+        public static final Codec<Attack> CODEC = Codec.FLOAT.listOf(2, 2).xmap(
+                pair -> new Attack(pair.get(0), pair.get(1)),
+                a -> List.of(a.damageBaseline(), a.speedBaseline()));
     }
 
     /** Multipliers, never absolutes, so four mediocre materials cannot sum into a good tool. */

@@ -107,17 +107,32 @@ final class ShapeMatch {
         check("pickaxe mirrored", match(pickaxe, grid("iron iron iron", ". wood diamond", ". wood .")), want);
 
         // A material is one ingredient whatever slot it fills, so an all-iron grid is the case where
-        // two tools sharing a box could both match. The sword and the shovel must never both fit.
+        // two tools sharing a box could both match. Of the three tools in a two wide box, exactly one
+        // may fit any all-iron grid, with or without the reinforcement, in either orientation. The
+        // pickaxe and the axe are left out on purpose: both fill three columns, so a cropped input
+        // fits a two wide box or a three wide one, never both, and between the two of them the empty
+        // cells never coincide in either orientation.
         List<String> shovel = List.of("HB", "G.", "GR");
+        List<String> hoe = List.of("HH", "BG", "RG");
         Parts allIron = new Parts("iron", "iron", "iron", "iron");
         for (String[] rows : new String[][] {
-                {". iron", "iron iron", "iron iron"}, {"iron .", "iron iron", "iron iron"},   // a sword, both ways
-                {"iron iron", "iron .", "iron iron"}, {"iron iron", ". iron", "iron iron"}}) {  // a shovel, both ways
-            Parts asSword = match(sword, grid(rows)), asShovel = match(shovel, grid(rows));
-            if ((asSword != null) == (asShovel != null)) {
-                throw new AssertionError("sword and shovel both " + (asSword != null ? "match" : "miss") + " " + Arrays.toString(rows));
+                {". iron", "iron iron", "iron iron"}, {"iron .", "iron iron", "iron iron"},     // a sword, both ways
+                {". iron", "iron iron", ". iron"}, {"iron .", "iron iron", "iron ."},
+                {"iron iron", "iron .", "iron iron"}, {"iron iron", ". iron", "iron iron"},     // a shovel, both ways
+                {"iron iron", "iron .", "iron ."}, {"iron iron", ". iron", ". iron"},
+                {"iron iron", "iron iron", "iron iron"},                                        // a hoe, both ways
+                {"iron iron", "iron iron", ". iron"}, {"iron iron", "iron iron", "iron ."}}) {
+            int fits = 0;
+            for (List<String> shape : List.of(sword, shovel, hoe)) {
+                fits += match(shape, grid(rows)) != null ? 1 : 0;
+            }
+            if (fits != 1) {
+                throw new AssertionError(fits + " tools fit " + Arrays.toString(rows));
             }
         }
+        check("hoe as written", match(hoe, grid("iron iron", "diamond wood", ". wood")), want);
+        check("hoe mirrored", match(hoe, grid("iron iron", "wood diamond", "wood .")), want);
+        check("vanilla hoe, no fittings, does not match", match(hoe, grid("iron iron", ". wood", ". wood")), null);
         check("shovel as written", match(shovel, grid("iron iron", "iron .", "iron iron")), allIron);
         check("shovel mirrored, no reinforcement", match(shovel, grid("iron iron", ". iron", ". iron")), new Parts("iron", "iron", "iron", null));
         System.out.println("ShapeMatch: every check passed");

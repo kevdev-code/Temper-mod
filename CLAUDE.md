@@ -11,8 +11,7 @@ adding any gameplay feature. This file covers only how the repo works.
 Targets Minecraft **26.1.2**, Java **25**, Gradle 9.5.1, built with Architectury Loom for both
 **Fabric** and **NeoForge**. Base package is `io.github.kevdev_code.temper`.
 
-State: PLAN.md Phase 4 (tool coverage) in progress: sword, pickaxe, axe and shovel are in; the hoe
-follows. Four part slots, three materials, assembled in the vanilla crafting table. The
+State: PLAN.md Phase 4 (tool coverage): sword, pickaxe, axe, shovel and hoe are in. Four part slots, three materials, assembled in the vanilla crafting table. The
 reinforcement is a slot only: it is stored, drawn and shown in the tooltip, but its behavioural trait
 waits for Phase 6 with the modifiers.
 
@@ -163,8 +162,11 @@ its creative tab entries all follow.
 the result into the stack's components, never recomputing per tick. The stack carries `temper:parts`,
 which is the tool's identity, plus the derived `max_damage`, `attribute_modifiers`, `enchantable` and,
 for a tool that mines, `tool` with vanilla's two rules: the head's `incorrect_for_drops` tag denies
-drops and the kind's mineable tag mines at the head's `mining_speed`. `ToolKind` holds what vanilla's
-`Items` gives each type, read off the jar: sword `(3.0f, -2.4f)`, pickaxe `(1.0f, -2.8f)`.
+drops and the kind's mineable tag mines at the head's `mining_speed`. The attack baselines are data
+too, under each material's head as `attack` per kind, because vanilla hand tunes them per material
+for the axe and the hoe (a diamond axe deals 9 like an iron one, every hoe deals 1); `ToolKind`
+carries only the mineable tag and the crafting shape. Read them off `Items` in the jar, never from
+memory: the axe shipped with iron's numbers for every head until the hoe's table exposed it.
 
 `ToolAssemblyRecipe` is one `CustomRecipe` for all tools; the recipe file names the kind and the kind
 carries its crafting shape as three strings (`H` head, `G` handle, `B` binding, `R` optional
@@ -248,7 +250,9 @@ but held to a rule `tool-sprite.py` audits: every bright tone of one material st
 `PALETTE_DISTANCE` (40 in RGB, measured) from every bright tone of every other. Iron stays pure white;
 when stone arrives it needs a cool cast strong enough to pass (`#6A8CB4` does, `#7590B0` sits at 36),
 and the audit already flags that a vanilla-like gold collides with wood at mid tones. A shape is judged
-on geometry alone: a contiguous band of five or more pixels at three quarters grey or brighter.
+on geometry alone and in proportion: the binding owns the blade's highlight, holding pixels at its
+brightest tone more densely than the head does. A fixed count asked the hoe's two-row arm for more
+light than it has. The audit checks both rules.
 
 **Layers never share a pixel.** An empty reinforcement is hidden by tinting its layer transparent,
 and in the GUI a layer hidden that way also hides whatever another layer drew beneath it: the knob was
