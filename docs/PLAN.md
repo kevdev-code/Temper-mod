@@ -207,6 +207,18 @@ binding and reinforcement land on layers 3 and 4 while their slots are 2 and 3. 
 assumes `layer == slot` fails silently, tinting a part with another part's material rather
 than raising anything.
 
+**Layers never share a pixel.** This is a constraint of the renderer, not a design preference,
+and it shapes the geometry of every sprite from Phase 4 on. An empty reinforcement is hidden by
+tinting its layer fully transparent (section 15), and in the GUI a layer hidden that way also hides
+whatever another layer drew beneath it. The case that revealed it: the pickaxe's knob sat over the
+last pixel of the haft, and the handle layer drew that pixel too so that a pickaxe without a
+reinforcement would keep its whole haft. In the screenshot it did not: that pixel showed the world
+behind the hotbar, while the haft pixel next to it, under no other layer, was drawn. So two pieces
+can never occupy the same cell, and an optional piece has to be an appendage that sits beside what
+it attaches to, never a cap over it. The knob became three pixels cupping the haft's end instead of
+four covering it. The sprite script refuses an overlap, and the checker compares the dark haft
+pixels the knob cups on purpose, so the case stays verified rather than assumed.
+
 ## 11. Data model
 
 A finished tool is a single item whose identity lives in data components:
@@ -225,8 +237,8 @@ is proven.
 
 **Phases 3 and 4 were swapped after Phase 2 shipped, and are listed here in the order they run.**
 The numbers still belong to their content, so Phase 4 is still tool coverage. Tool coverage adds no
-new API: it reuses the sprite zones, the material table, the assembly and the recipe, all of which
-are proven. Stations bring the project's first menus, screens and networking, which is where
+new API: it reuses the material table, the assembly and the recipe, all of which are proven; the
+way sprites are drawn did change, and Phase 4 below says how. Stations bring the project's first menus, screens and networking, which is where
 multiloader diverges most, and nothing else waits on them. Running coverage first also settles the
 surface question in section 15 with five tool types of evidence rather than with one sprite.
 
@@ -254,6 +266,24 @@ Binding and reinforcement. Four-layer rendering. Modifier slot count driven by b
 ### Phase 4 — Tool coverage
 
 Pickaxe, axe, shovel, hoe. Required for the replacement doctrine to hold.
+
+**The drawing method changed here.** The sword was drawn from a parametric model: zones as boxes
+on a diagonal axis, outlines and seams computed. The pickaxe was tried the same way, as strokes
+with a centreline and a width profile, and failed eight times: the geometry came out of formulas
+instead of the sprite the player already knows, and each round fixed one thing and broke another.
+From the pickaxe on, a sprite starts from the vanilla PNG of the matching tool type, read out of the
+game jar and never redrawn, with head and stick told apart by the PNG's own colours. On that base
+three things are added and nothing else, each listed pixel by pixel: blades at the head's points
+(the binding), a small knob on the butt of the haft (the reinforcement), and a stretch of haft cut
+square across it (the grip). The head's proportions, the haft's angle and thickness and where they
+cross stay vanilla's. That is what makes a Temper pickaxe read as a pickaxe at 1:1 in a slot: the
+silhouette is the one the player has seen ten thousand times, and the parts are what changes on it.
+
+Every comparison sheet carries a numbered grid, rows down the side and columns across the top,
+with ours beside vanilla at the same scale. It is what let the pickaxe close in two rounds after
+eight without it: a correction names a cell, "(13,4) becomes grip, (15,3) goes", instead of
+describing a shape, and the next sheet shows whether that cell changed. Keep it for the axe, the
+shovel and the hoe.
 
 ### Phase 3 — Stations
 
